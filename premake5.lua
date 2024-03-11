@@ -1,9 +1,10 @@
-workspace "miv"
+workspace "ned"
     configurations { "Debug", "Release" }
 
-project "miv"
+project "ned"
     kind "ConsoleApp"
     language "C"
+    cdialect "gnu99"
     targetdir "build/%{cfg.buildcfg}"
     
     files
@@ -17,6 +18,7 @@ project "miv"
         {
             "-Wall",
             "-Wextra",
+            "-Wshadow",
             "-pedantic",
         }
 

@@ -1,2 +1,2 @@
-# miv
-miv - A minimal text editor
+# ned
+ned - noxet's editor, a simple terminal text editor
