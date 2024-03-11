@@ -66,6 +66,7 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/ned.o \
+	$(OBJDIR)/utils.o \
 
 RESOURCES := \
 
@@ -125,6 +126,9 @@ $(OBJECTS): | $(OBJDIR)
 endif
 
 $(OBJDIR)/ned.o: src/ned.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/utils.o: src/utils.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

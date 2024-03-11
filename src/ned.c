@@ -1,3 +1,6 @@
+#include "utils.h"
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -6,7 +9,6 @@
 #include <termios.h>
 #include <unistd.h>
 
-#define UNUSED(x) (void) (x)
 
 static struct termios userTerm;
 
@@ -107,6 +109,7 @@ int main()
     sa.sa_handler = handler;
     if (sigaction(SIGTERM, &sa, NULL) == -1)
     {
+        errExit("sigaction failed\n");
         printf("[%s] - sigaction failed\n", __func__);
         exit(EXIT_SUCCESS);
     }
@@ -133,7 +136,11 @@ int main()
         {
             putchar(tolower(ch));
         }
-        else if (ch == '\n' || ch == '\r')
+        else if (ch == '\r')
+        {
+            printf("\r\n");
+        }
+        else if (ch == '\n')
         {
             putchar(ch);
         }
