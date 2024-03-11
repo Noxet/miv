@@ -1,0 +1,6 @@
+premake5
+build/
+obj/
+
+miv.make
+Makefile
