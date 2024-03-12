@@ -19,10 +19,10 @@ void enableRawMode()
     tcgetattr(STDIN_FILENO, &raw);
 
     printf("termios fields:\n");
-    printf("\tiflag: 0x%04x\n", raw.c_iflag);
-    printf("\toflag: 0x%04x\n", raw.c_oflag);
-    printf("\tcflag: 0x%04x\n", raw.c_cflag);
-    printf("\tlflag: 0x%04x\n", raw.c_lflag);
+    printf("\tiflag: 0x%04lx\n", raw.c_iflag);
+    printf("\toflag: 0x%04lx\n", raw.c_oflag);
+    printf("\tcflag: 0x%04lx\n", raw.c_cflag);
+    printf("\tlflag: 0x%04lx\n", raw.c_lflag);
 
     //raw.c_cc[VINTR] = 12;
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
@@ -91,7 +91,7 @@ static void handler(int sig)
     // restore starting terminal state
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &userTerm) == -1)
     {
-        printf("[%s] - Failed to set tcsetattr\n", __func__);
+        printf("[%s] - Failed to set tcsetattr\r\n", __func__);
     }
 
     _exit(EXIT_SUCCESS);
@@ -99,20 +99,11 @@ static void handler(int sig)
 
 int main()
 {
-    if (ttySetRawMode(&userTerm) == -1)
-    {
-        printf("[%s] - ttySetRawMode failed\n", __func__);
-        exit(EXIT_SUCCESS);
-    }
+    if (ttySetRawMode(&userTerm) == -1) errExit("Failed to set raw mode");
 
     struct sigaction sa, prev;
     sa.sa_handler = handler;
-    if (sigaction(SIGTERM, &sa, NULL) == -1)
-    {
-        errExit("sigaction failed\n");
-        printf("[%s] - sigaction failed\n", __func__);
-        exit(EXIT_SUCCESS);
-    }
+    if (sigaction(SIGTERM, &sa, NULL) == -1) errExit("sigaction failed\n");
 
     // disable stdout buffering
     setbuf(stdout, NULL);
@@ -123,7 +114,6 @@ int main()
         ssize_t n = read(STDIN_FILENO, &ch, 1);
         if (n == -1)
         {
-            printf("[%s] - read failed\n", __func__);
             break;
         }
         else if (n == 0)
@@ -163,10 +153,7 @@ int main()
 
     }
 
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &userTerm) == -1)
-    {
-        printf("Restoring userTerm failed\n");
-    }
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &userTerm) == -1) errExit("Restoring userTerm failed");
 
     return 0;
 }

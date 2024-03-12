@@ -2,5 +2,5 @@ premake5
 build/
 obj/
 
-miv.make
+ned.make
 Makefile
