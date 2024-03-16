@@ -1,5 +1,6 @@
 #include "utils.h"
 
+#include <asm-generic/ioctls.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -7,6 +8,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <sys/errno.h>
+#include <sys/ioctl.h>
 
 
 static struct termios userTerm;
@@ -31,23 +33,6 @@ int termSetupSignals()
     sa.sa_handler = sigHandler;
     if (sigaction(SIGTERM, &sa, NULL) == -1) return -1;
     return 0;
-}
-
-void enableRawMode()
-{
-    struct termios raw;
-
-    tcgetattr(STDIN_FILENO, &raw);
-
-    printf("termios fields:\n");
-    printf("\tiflag: 0x%04lx\n", raw.c_iflag);
-    printf("\toflag: 0x%04lx\n", raw.c_oflag);
-    printf("\tcflag: 0x%04lx\n", raw.c_cflag);
-    printf("\tlflag: 0x%04lx\n", raw.c_lflag);
-
-    //raw.c_cc[VINTR] = 12;
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
-
 }
 
 void setEcho(bool state)
@@ -106,6 +91,23 @@ int termDisableRawMode()
 {
     // restore the saved config
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &userTerm) == -1) return -1;
+    return 0;
+}
+
+int termGetWindowSize(int *rows, int *cols)
+{
+    struct winsize ws;
+
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
+    {
+        return -1;
+    }
+    else
+    {
+        *rows = ws.ws_row;
+        *cols = ws.ws_col;
+    }
+
     return 0;
 }
 
