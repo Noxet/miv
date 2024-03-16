@@ -9,6 +9,7 @@
 
 #define NED_VERSION "0.1"
 
+#define ESC_KEY '\x1b'
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 
@@ -16,8 +17,10 @@ static bool nedRunning = true;
 
 typedef struct
 {
-    int rows;
+    int rows;   // window size
     int cols;
+    int cx;     // cursor pos
+    int cy;
 } edConfig_s;
 
 
@@ -30,6 +33,30 @@ void edProcessKey()
 
     switch (key)
     {
+        case ESC_KEY:
+            // Got an escape char
+            termReadKey();  // skip the '['
+            char cmdKey = termReadKey();
+            switch(cmdKey)
+            {
+                case 'A':
+                    edConfig.cy--;
+                    if (edConfig.cy < 0) edConfig.cy = 0;
+                    break;
+                case 'B':
+                    edConfig.cy++;
+                    if (edConfig.cy >= edConfig.rows - 1) edConfig.cy = edConfig.rows - 1;
+                    break;
+                case 'C':
+                    edConfig.cx++;
+                    if (edConfig.cx >= edConfig.cols - 1) edConfig.cx = edConfig.cols - 1;
+                    break;
+                case 'D':
+                    edConfig.cx--;
+                    if (edConfig.cx < 0) edConfig.cx = 0;
+                    break;
+            }
+            break;
         case CTRL_KEY('q'):
             nedRunning = false;
             write(STDOUT_FILENO, "\x1b[2J", 4);
@@ -54,6 +81,12 @@ void edDrawRows(astring *frame)
             int welcomeLen = snprintf(welcome, sizeof(welcome),
                     "ned, the blazingly fast text editor -- version %s", NED_VERSION);
             int padding = (edConfig.cols - welcomeLen) / 2;
+
+            if (padding)
+            {
+                astringAppend(frame, "~", 1);
+                padding--;
+            }
 
             while (padding--) astringAppend(frame, " ", 1);
             astringAppend(frame, welcome, welcomeLen);
@@ -82,7 +115,12 @@ void edRefreshScreen()
 
     edDrawRows(frame);
 
-    astringAppend(frame, CURSOR_ORIGIN_CMD, CURSOR_ORIGIN_LEN);
+    // Set cursor position
+    char cursorPos[32];
+    // Terminal is 1-indexed, so we need to add 1 to the positions
+    int cursorPosLen = snprintf(cursorPos, sizeof(cursorPos), "\x1b[%d;%dH", edConfig.cy + 1, edConfig.cx + 1);
+    astringAppend(frame, cursorPos, cursorPosLen);
+
     astringAppend(frame, CURSOR_SHOW_CMD, CURSOR_SHOW_LEN);
 
     write(STDOUT_FILENO, astringGetString(frame), astringGetLen(frame));
@@ -92,6 +130,9 @@ void edRefreshScreen()
 
 void edInit()
 {
+    edConfig.cx = 0;
+    edConfig.cy = 0;
+
     if (termGetWindowSize(&edConfig.rows, &edConfig.cols) == -1) errExit("Failed to get window size");
 
 
@@ -104,8 +145,6 @@ int main()
     if (termSetupSignals() == -1) errExit("Failed to set up signal handler");
 
     edInit();
-
-    astring *astr = astringNew();
 
 
     // disable stdout buffering

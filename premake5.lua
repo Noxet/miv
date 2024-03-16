@@ -20,6 +20,12 @@ project "ned"
             "-Wextra",
             "-Wshadow",
             "-pedantic",
+            --"-fsanitize=address",
+        }
+
+        linkoptions
+        {
+            --"-lasan",
         }
 
     filter "configurations:Debug"

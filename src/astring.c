@@ -20,6 +20,7 @@ astring* astringNew()
 
 int astringAppend(astring *astr, const char *text, int len)
 {
+    // TODO(noxet): make this more efficient, e.g. start with size 1000 and double when we fill it
     char *newBuf = realloc(astr->buf, astr->len + len);
     if (!newBuf) return -1;
 
