@@ -96,6 +96,8 @@ int termDisableRawMode()
 
 int termGetWindowSize(int *rows, int *cols)
 {
+    // TODO(noxet): Implement a getCursorPos function by using escape sequence for systems that don't
+    // implement the ioctl
     struct winsize ws;
 
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)

@@ -4,7 +4,7 @@ workspace "ned"
 project "ned"
     kind "ConsoleApp"
     language "C"
-    cdialect "gnu99"
+    cdialect "gnu11"
     targetdir "build/%{cfg.buildcfg}"
     
     files
