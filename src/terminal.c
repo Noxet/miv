@@ -1,3 +1,4 @@
+#include "terminal.h"
 #include "utils.h"
 
 #include <asm-generic/ioctls.h>
@@ -79,8 +80,8 @@ int termEnableRawMode()
             INPCK | ISTRIP | IXON | PARMRK);
     term.c_oflag &= ~OPOST;
 
-    term.c_cc[VMIN] = 1;
-    term.c_cc[VTIME] = 0;
+    term.c_cc[VMIN] = 0;
+    term.c_cc[VTIME] = 1;
 
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &term) == -1) return -1;
 
@@ -113,13 +114,40 @@ int termGetWindowSize(int *rows, int *cols)
     return 0;
 }
 
-char termReadKey()
+int termReadKey()
 {
     char ch = '\0';
     ssize_t nread;
     while ((nread = read(STDIN_FILENO, &ch, 1)) != 1)
     {
         if (nread == -1 && errno != EAGAIN) errExit("Failed to read input key");
+    }
+
+    if (ch == ESC_KEY)
+    {
+        char seq[2];
+
+        // If read times out or failes, assume user only pressed ESC key and return that
+        if (read(STDIN_FILENO, &seq[0], 1) != 1) return ESC_KEY;
+        if (read(STDIN_FILENO, &seq[1], 1) != 1) return ESC_KEY;
+
+        if (seq[0] == LEFT_BRACKET)
+        {
+            switch (seq[1])
+            {
+                case 'A':
+                    return ARROW_UP;
+                case 'B':
+                    return ARROW_DOWN;
+                case 'C':
+                    return ARROW_RIGHT;
+                case 'D':
+                    return ARROW_LEFT;
+                default:
+                    return ESC_KEY;
+
+            }
+        }
     }
 
     return ch;

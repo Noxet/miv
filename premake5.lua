@@ -20,6 +20,7 @@ project "ned"
             "-Wextra",
             "-Wshadow",
             "-pedantic",
+            "-Wswitch-enum",
             --"-fsanitize=address",
         }
 

@@ -26,23 +26,23 @@ typedef struct
 
 static edConfig_s edConfig;
 
-void edMoveCursor(char key)
+void edMoveCursor(int key)
 {
     switch(key)
     {
-        case 'A':
+        case ARROW_UP:
             edConfig.cy--;
             if (edConfig.cy < 0) edConfig.cy = 0;
             break;
-        case 'B':
+        case ARROW_DOWN:
             edConfig.cy++;
             if (edConfig.cy >= edConfig.rows - 1) edConfig.cy = edConfig.rows - 1;
             break;
-        case 'C':
+        case ARROW_RIGHT:
             edConfig.cx++;
             if (edConfig.cx >= edConfig.cols - 1) edConfig.cx = edConfig.cols - 1;
             break;
-        case 'D':
+        case ARROW_LEFT:
             edConfig.cx--;
             if (edConfig.cx < 0) edConfig.cx = 0;
             break;
@@ -51,15 +51,23 @@ void edMoveCursor(char key)
 
 void edProcessKey()
 {
-    char key = termReadKey();
+    int key = termReadKey();
 
     switch (key)
     {
         case ESC_KEY:
-            // Got an escape char
-            termReadKey();  // skip the '['
-            char cmdKey = termReadKey();
-            edMoveCursor(cmdKey);
+            break;
+        case ARROW_UP:
+            edMoveCursor(ARROW_UP);
+            break;
+        case ARROW_DOWN:
+            edMoveCursor(ARROW_DOWN);
+            break;
+        case ARROW_LEFT:
+            edMoveCursor(ARROW_LEFT);
+            break;
+        case ARROW_RIGHT:
+            edMoveCursor(ARROW_RIGHT);
             break;
         case CTRL_KEY('q'):
             nedRunning = false;

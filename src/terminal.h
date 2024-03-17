@@ -11,9 +11,20 @@
 #define DISPLAY_ERASE_LINE_CMD  "\x1b[K"
 #define DISPLAY_ERASE_LINE_LEN  3
 
+typedef enum
+{
+    ESC_KEY         = '\x1b',
+    LEFT_BRACKET    = '[',
+
+    // Choose numbers of out real character range
+    ARROW_UP        = 1000,
+    ARROW_DOWN,
+    ARROW_LEFT,
+    ARROW_RIGHT,
+} termKeys_e;
 
 int termSetupSignals();
 int termEnableRawMode();
 int termDisableRawMode();
 int termGetWindowSize(int *rows, int *cols);
-char termReadKey();
+int termReadKey();
