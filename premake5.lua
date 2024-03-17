@@ -1,5 +1,5 @@
 workspace "ned"
-    configurations { "Debug", "Release" }
+    configurations { "Debug", "Release", "ASAN" }
 
 project "ned"
     kind "ConsoleApp"
@@ -21,13 +21,14 @@ project "ned"
             "-Wshadow",
             "-pedantic",
             "-Wswitch-enum",
-            --"-fsanitize=address",
         }
 
-        linkoptions
-        {
-            --"-lasan",
-        }
+
+    filter "configurations:ASAN"
+        buildoptions { "-fsanitize=address" }
+        linkoptions { "-lasan" }
+        defines { "DEBUG" }
+        symbols "On"
 
     filter "configurations:Debug"
         defines { "DEBUG" }
