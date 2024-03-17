@@ -26,6 +26,28 @@ typedef struct
 
 static edConfig_s edConfig;
 
+void edMoveCursor(char key)
+{
+    switch(key)
+    {
+        case 'A':
+            edConfig.cy--;
+            if (edConfig.cy < 0) edConfig.cy = 0;
+            break;
+        case 'B':
+            edConfig.cy++;
+            if (edConfig.cy >= edConfig.rows - 1) edConfig.cy = edConfig.rows - 1;
+            break;
+        case 'C':
+            edConfig.cx++;
+            if (edConfig.cx >= edConfig.cols - 1) edConfig.cx = edConfig.cols - 1;
+            break;
+        case 'D':
+            edConfig.cx--;
+            if (edConfig.cx < 0) edConfig.cx = 0;
+            break;
+    }
+}
 
 void edProcessKey()
 {
@@ -37,25 +59,7 @@ void edProcessKey()
             // Got an escape char
             termReadKey();  // skip the '['
             char cmdKey = termReadKey();
-            switch(cmdKey)
-            {
-                case 'A':
-                    edConfig.cy--;
-                    if (edConfig.cy < 0) edConfig.cy = 0;
-                    break;
-                case 'B':
-                    edConfig.cy++;
-                    if (edConfig.cy >= edConfig.rows - 1) edConfig.cy = edConfig.rows - 1;
-                    break;
-                case 'C':
-                    edConfig.cx++;
-                    if (edConfig.cx >= edConfig.cols - 1) edConfig.cx = edConfig.cols - 1;
-                    break;
-                case 'D':
-                    edConfig.cx--;
-                    if (edConfig.cx < 0) edConfig.cx = 0;
-                    break;
-            }
+            edMoveCursor(cmdKey);
             break;
         case CTRL_KEY('q'):
             nedRunning = false;
@@ -133,6 +137,7 @@ void edInit()
     edConfig.cx = 0;
     edConfig.cy = 0;
 
+    // TODO(noxet): Handle window resize event
     if (termGetWindowSize(&edConfig.rows, &edConfig.cols) == -1) errExit("Failed to get window size");
 
 
