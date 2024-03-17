@@ -145,6 +145,12 @@ int termReadKey()
                 {
                     switch(seq[1])
                     {
+                        case '1': // 2 for HOME
+                        case '7': return HOME;
+                        case '2': return INSERT;
+                        case '3': return DELETE;
+                        case '4': // 2 for END
+                        case '8': return END;
                         case '5': return PAGE_UP;
                         case '6': return PAGE_DOWN;
                     }

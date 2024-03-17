@@ -21,6 +21,12 @@ typedef enum
     ARROW_DOWN,
     ARROW_LEFT,
     ARROW_RIGHT,
+
+    // Home/PgUp keys
+    HOME,
+    INSERT,
+    DELETE,
+    END,
     PAGE_UP,
     PAGE_DOWN,
 } termKeys_e;
