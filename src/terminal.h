@@ -21,6 +21,8 @@ typedef enum
     ARROW_DOWN,
     ARROW_LEFT,
     ARROW_RIGHT,
+    PAGE_UP,
+    PAGE_DOWN,
 } termKeys_e;
 
 int termSetupSignals();

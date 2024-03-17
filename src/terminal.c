@@ -19,6 +19,8 @@ static void sigHandler(int sig)
 {
     UNUSED(sig);
 
+    printf("GOT SIG: %d\n", sig);
+
     // restore starting terminal state
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &userTerm) == -1)
     {
@@ -30,9 +32,11 @@ static void sigHandler(int sig)
 
 int termSetupSignals()
 {
-    struct sigaction sa, prev;
+    struct sigaction sa = { 0 };
+    sa.sa_flags = SA_NODEFER;
     sa.sa_handler = sigHandler;
     if (sigaction(SIGTERM, &sa, NULL) == -1) return -1;
+    if (sigaction(SIGSEGV, &sa, NULL) == -1) return -1;
     return 0;
 }
 
@@ -125,7 +129,7 @@ int termReadKey()
 
     if (ch == ESC_KEY)
     {
-        char seq[2];
+        char seq[3];
 
         // If read times out or failes, assume user only pressed ESC key and return that
         if (read(STDIN_FILENO, &seq[0], 1) != 1) return ESC_KEY;
@@ -133,19 +137,30 @@ int termReadKey()
 
         if (seq[0] == LEFT_BRACKET)
         {
-            switch (seq[1])
+            // For the Page keys, eg PageUp, the command is <ESC>[5~
+            if (seq[1] >= '0' && seq[1] <= '9')
             {
-                case 'A':
-                    return ARROW_UP;
-                case 'B':
-                    return ARROW_DOWN;
-                case 'C':
-                    return ARROW_RIGHT;
-                case 'D':
-                    return ARROW_LEFT;
-                default:
-                    return ESC_KEY;
+                if (read(STDIN_FILENO, &seq[2], 1) != 1) return ESC_KEY;
+                if (seq[2] == '~')
+                {
+                    switch(seq[1])
+                    {
+                        case '5': return PAGE_UP;
+                        case '6': return PAGE_DOWN;
+                    }
+                }
+            }
+            else
+            {
+                switch (seq[1])
+                {
+                    case 'A': return ARROW_UP;
+                    case 'B': return ARROW_DOWN;
+                    case 'C': return ARROW_RIGHT;
+                    case 'D': return ARROW_LEFT;
+                    default: return ESC_KEY;
 
+                }
             }
         }
     }

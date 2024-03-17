@@ -46,6 +46,12 @@ void edMoveCursor(int key)
             edConfig.cx--;
             if (edConfig.cx < 0) edConfig.cx = 0;
             break;
+        case PAGE_UP:
+            edConfig.cy = 0;
+            break;
+        case PAGE_DOWN:
+            edConfig.cy = edConfig.rows - 1;
+            break;
     }
 }
 
@@ -68,6 +74,12 @@ void edProcessKey()
             break;
         case ARROW_RIGHT:
             edMoveCursor(ARROW_RIGHT);
+            break;
+        case PAGE_UP:
+            edMoveCursor(PAGE_UP);
+            break;
+        case PAGE_DOWN:
+            edMoveCursor(PAGE_DOWN);
             break;
         case CTRL_KEY('q'):
             nedRunning = false;
