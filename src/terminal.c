@@ -11,6 +11,8 @@
 #include <sys/errno.h>
 #include <sys/ioctl.h>
 
+static int termParseBracketKeys();
+static int termParseXtermKeys();
 
 static struct termios userTerm;
 
@@ -129,48 +131,78 @@ int termReadKey()
 
     if (ch == ESC_KEY)
     {
-        char seq[3];
-
         // If read times out or failes, assume user only pressed ESC key and return that
-        if (read(STDIN_FILENO, &seq[0], 1) != 1) return ESC_KEY;
-        if (read(STDIN_FILENO, &seq[1], 1) != 1) return ESC_KEY;
+        char controlChar;
+        if (read(STDIN_FILENO, &controlChar, 1) != 1) return ESC_KEY;
 
-        if (seq[0] == LEFT_BRACKET)
+        if (controlChar == LEFT_BRACKET)
         {
-            // For the Page keys, eg PageUp, the command is <ESC>[5~
-            if (seq[1] >= '0' && seq[1] <= '9')
-            {
-                if (read(STDIN_FILENO, &seq[2], 1) != 1) return ESC_KEY;
-                if (seq[2] == '~')
-                {
-                    switch(seq[1])
-                    {
-                        case '1': // 2 for HOME
-                        case '7': return HOME;
-                        case '2': return INSERT;
-                        case '3': return DELETE;
-                        case '4': // 2 for END
-                        case '8': return END;
-                        case '5': return PAGE_UP;
-                        case '6': return PAGE_DOWN;
-                    }
-                }
-            }
-            else
-            {
-                switch (seq[1])
-                {
-                    case 'A': return ARROW_UP;
-                    case 'B': return ARROW_DOWN;
-                    case 'C': return ARROW_RIGHT;
-                    case 'D': return ARROW_LEFT;
-                    default: return ESC_KEY;
-
-                }
-            }
+            return termParseBracketKeys();
+        }
+        else if (controlChar == 'O')
+        {
+            return termParseXtermKeys();
         }
     }
 
     return ch;
+}
+
+static int termParseBracketKeys()
+{
+    char seq[2];
+    if (read(STDIN_FILENO, &seq[0], 1) != 1) return ESC_KEY;
+
+    if (seq[0] >= '1' && seq[0] <= '9')
+    {
+        // For the VT sequence of the Page keys, eg PageUp, the command is <ESC>[5~
+        if (read(STDIN_FILENO, &seq[1], 1) != 1) return ESC_KEY;
+        if (seq[1] == '~')
+        {
+            switch(seq[0])
+            {
+                case '1': // 2 for HOME
+                case '7': return HOME;
+                case '2': return INSERT;
+                case '3': return DELETE;
+                case '4': // 2 for END
+                case '8': return END;
+                case '5': return PAGE_UP;
+                case '6': return PAGE_DOWN;
+            }
+        }
+    }
+    else
+    {
+        switch (seq[0])
+        {
+            case 'A': return ARROW_UP;
+            case 'B': return ARROW_DOWN;
+            case 'C': return ARROW_RIGHT;
+            case 'D': return ARROW_LEFT;
+            case 'F': return END;
+            case 'H': return HOME;
+            default: return ESC_KEY;
+
+        }
+    }
+
+    return ESC_KEY;
+}
+
+static int termParseXtermKeys()
+{
+    char ch;
+    if (read(STDIN_FILENO, &ch, 1) != 1) return ESC_KEY;
+
+    switch (ch)
+    {
+        case 'F':
+            return END;
+        case 'H':
+            return HOME;
+    }
+
+    return ESC_KEY;
 }
 

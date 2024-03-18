@@ -17,6 +17,12 @@ static bool nedRunning = true;
 
 typedef struct
 {
+    int size;
+    char *string;
+} edRow_s;
+
+typedef struct
+{
     int rows;   // window size
     int cols;
     int cx;     // cursor pos
@@ -46,11 +52,11 @@ void edMoveCursor(int key)
             edConfig.cx--;
             if (edConfig.cx < 0) edConfig.cx = 0;
             break;
-        case PAGE_UP:
-            edConfig.cy = 0;
+        case HOME:
+            edConfig.cx = 0;
             break;
-        case PAGE_DOWN:
-            edConfig.cy = edConfig.rows - 1;
+        case END:
+            edConfig.cx = edConfig.cols - 1;
             break;
     }
 }
@@ -64,22 +70,19 @@ void edProcessKey()
         case ESC_KEY:
             break;
         case ARROW_UP:
-            edMoveCursor(ARROW_UP);
-            break;
         case ARROW_DOWN:
-            edMoveCursor(ARROW_DOWN);
-            break;
         case ARROW_LEFT:
-            edMoveCursor(ARROW_LEFT);
-            break;
         case ARROW_RIGHT:
-            edMoveCursor(ARROW_RIGHT);
+        case HOME:
+        case END:
+            edMoveCursor(key);
             break;
         case PAGE_UP:
-            edMoveCursor(PAGE_UP);
-            break;
         case PAGE_DOWN:
-            edMoveCursor(PAGE_DOWN);
+            {
+                int times = edConfig.rows;
+                while (times--) edMoveCursor(key == PAGE_UP ? ARROW_UP : ARROW_DOWN);
+            }
             break;
         case CTRL_KEY('q'):
             nedRunning = false;
