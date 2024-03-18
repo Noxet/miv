@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
 
 #define NED_VERSION "0.1"
@@ -27,6 +28,8 @@ typedef struct
     int cols;
     int cx;     // cursor pos
     int cy;
+    edRow_s row;
+    int numRows;
 } edConfig_s;
 
 
@@ -102,7 +105,12 @@ void edDrawRows(astring *frame)
 {
     for (int y = 0; y < edConfig.rows; y++)
     {
-        if (y == edConfig.rows / 3)
+        if (y < edConfig.numRows)
+        {
+            int len = edConfig.row.size;
+            astringAppend(frame, edConfig.row.string, len);
+        }
+        else if (y == edConfig.rows / 3)
         {
             char welcome[128] = { 0 };
             int welcomeLen = snprintf(welcome, sizeof(welcome),
@@ -155,10 +163,23 @@ void edRefreshScreen()
     astringFree(&frame);
 }
 
+void edOpen()
+{
+    char *line = "Hello, ned!";
+    ssize_t lineLen = strlen(line);
+
+    edConfig.row.size = lineLen;
+    edConfig.row.string = strdup(line);
+    if (edConfig.row.string == NULL) errExit("Failed to allocate memory for string");
+
+    edConfig.numRows = 1;
+}
+
 void edInit()
 {
     edConfig.cx = 0;
     edConfig.cy = 0;
+    edConfig.numRows = 0;
 
     // TODO(noxet): Handle window resize event
     if (termGetWindowSize(&edConfig.rows, &edConfig.cols) == -1) errExit("Failed to get window size");
@@ -173,6 +194,7 @@ int main()
     if (termSetupSignals() == -1) errExit("Failed to set up signal handler");
 
     edInit();
+    edOpen();
 
 
     // disable stdout buffering
