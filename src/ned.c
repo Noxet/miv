@@ -32,7 +32,7 @@ typedef struct
     int winCols;
     int cx;     // cursor pos
     int cy;
-    edRow_s row;
+    edRow_s *row;
     int numRows;
 } edConfig_s;
 
@@ -140,8 +140,8 @@ void edDrawRows(astring *frame)
         if (y < edConfig.numRows)
         {
             // limit text size to the window width
-            int len = edConfig.row.size > edConfig.winCols ? edConfig.winCols : edConfig.row.size;
-            astringAppend(frame, edConfig.row.string, len);
+            int len = edConfig.row[y].size > edConfig.winCols ? edConfig.winCols : edConfig.row[y].size;
+            astringAppend(frame, edConfig.row[y].string, len);
         }
         else if (y == edConfig.winRows/ 3)
         {
@@ -184,6 +184,18 @@ void edRefreshScreen()
     astringFree(&frame);
 }
 
+void edAppendRow(char *line, size_t lineLen)
+{
+    // TODO(noxet): reallocate row when we hit limit
+
+    line[lineLen] = '\0';
+
+    edConfig.row[edConfig.numRows].size = lineLen;
+    // TODO(noxet): free this memory later, in edClose?
+    edConfig.row[edConfig.numRows].string = strdup(line);
+    edConfig.numRows++;
+}
+
 void edOpen(const char *filename)
 {
     assert(filename != NULL);
@@ -193,19 +205,19 @@ void edOpen(const char *filename)
 
     char *line = NULL;
     size_t bufferSize = 0;
-    ssize_t lineLen = getline(&line, &bufferSize, inputFile);
-    if (lineLen != -1)
+    ssize_t lineLen = 0;
+    while ((lineLen = getline(&line, &bufferSize, inputFile)) != -1)
     {
+        // TODO(noxet): hack to avoid BO, fix later with reallocations
+        if (edConfig.numRows >= 100) break;
+
         // remove newline char(s) if present and terminate string
         while (lineLen > 0 && (line[lineLen - 1] == '\n' || line[lineLen - 1] == '\r')) lineLen--;
-        line[lineLen - 1] = '\0';
+        edAppendRow(line, lineLen);
 
-        edConfig.row.size = lineLen;
-        // TODO(noxet): free this memory later, in edClose?
-        edConfig.row.string = strdup(line);
-        edConfig.numRows = 1;
+        LOG("reading string: %s, of length: %zu\n", line, lineLen);
     }
-    
+
     free(line);
     fclose(inputFile);
 }
@@ -214,6 +226,7 @@ void edInit()
 {
     edConfig.cx = 0;
     edConfig.cy = 0;
+    edConfig.row = calloc(100, sizeof(*edConfig.row));
     edConfig.numRows = 0;
 
     // TODO(noxet): Handle window resize event
