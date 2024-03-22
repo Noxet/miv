@@ -11,8 +11,8 @@
 #include <sys/errno.h>
 #include <sys/ioctl.h>
 
-static int termParseBracketKeys();
-static int termParseXtermKeys();
+static termKey_e termParseBracketKeys();
+static termKey_e termParseXtermKeys();
 
 static struct termios userTerm;
 
@@ -120,7 +120,7 @@ int termGetWindowSize(int *rows, int *cols)
     return 0;
 }
 
-int termReadKey()
+termKey_e termReadKey()
 {
     char ch = '\0';
     ssize_t nread;
@@ -148,7 +148,7 @@ int termReadKey()
     return ch;
 }
 
-static int termParseBracketKeys()
+static termKey_e termParseBracketKeys()
 {
     char seq[2];
     if (read(STDIN_FILENO, &seq[0], 1) != 1) return ESC_KEY;
@@ -190,7 +190,7 @@ static int termParseBracketKeys()
     return ESC_KEY;
 }
 
-static int termParseXtermKeys()
+static termKey_e termParseXtermKeys()
 {
     char ch;
     if (read(STDIN_FILENO, &ch, 1) != 1) return ESC_KEY;

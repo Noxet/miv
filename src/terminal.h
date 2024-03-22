@@ -29,10 +29,10 @@ typedef enum
     END,
     PAGE_UP,
     PAGE_DOWN,
-} termKeys_e;
+} termKey_e;
 
 int termSetupSignals();
 int termEnableRawMode();
 int termDisableRawMode();
 int termGetWindowSize(int *rows, int *cols);
-int termReadKey();
+termKey_e termReadKey();
