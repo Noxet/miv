@@ -1,3 +1,6 @@
+
+#define _DEFAULT_SOURCE
+
 #include "utils.h"
 #include "terminal.h"
 #include "astring.h"
@@ -7,6 +10,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>
 
 #define NED_VERSION "0.1"
 
@@ -104,6 +108,31 @@ void edProcessKey()
     }
 }
 
+void edDrawWelcomeMsg(astring *frame)
+{
+    if (edConfig.numRows == 0)
+    {
+
+        char welcome[128] = { 0 };
+        int welcomeLen = snprintf(welcome, sizeof(welcome),
+                "ned, the blazingly fast text editor -- version %s", NED_VERSION);
+        int padding = (edConfig.winCols - welcomeLen) / 2;
+
+        if (padding)
+        {
+            astringAppend(frame, "~", 1);
+            padding--;
+        }
+
+        while (padding--) astringAppend(frame, " ", 1);
+        astringAppend(frame, welcome, welcomeLen);
+    }
+    else
+    {
+        astringAppend(frame, "~", 1);
+    }
+}
+
 void edDrawRows(astring *frame)
 {
     for (int y = 0; y < edConfig.winRows; y++)
@@ -116,19 +145,7 @@ void edDrawRows(astring *frame)
         }
         else if (y == edConfig.winRows/ 3)
         {
-            char welcome[128] = { 0 };
-            int welcomeLen = snprintf(welcome, sizeof(welcome),
-                    "ned, the blazingly fast text editor -- version %s", NED_VERSION);
-            int padding = (edConfig.winCols - welcomeLen) / 2;
-
-            if (padding)
-            {
-                astringAppend(frame, "~", 1);
-                padding--;
-            }
-
-            while (padding--) astringAppend(frame, " ", 1);
-            astringAppend(frame, welcome, welcomeLen);
+            edDrawWelcomeMsg(frame);
         }
         else
         {
@@ -169,6 +186,8 @@ void edRefreshScreen()
 
 void edOpen(const char *filename)
 {
+    assert(filename != NULL);
+
     FILE *inputFile = fopen(filename, "r");
     if (!inputFile) errExit("Failed to open file: %s", filename);
 
@@ -216,7 +235,6 @@ int main(int argc, char *argv[])
     {
         edOpen(argv[1]);
     }
-
 
     // disable stdout buffering
     setbuf(stdout, NULL);
