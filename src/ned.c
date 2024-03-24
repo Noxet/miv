@@ -34,6 +34,7 @@ typedef struct
     int cy;
     edRow_s *row;
     int numRows;
+    int rowOffset;
 } edConfig_s;
 
 
@@ -80,7 +81,13 @@ void edProcessKey()
         case ESC_KEY:
             break;
         case ARROW_UP:
+            if (edConfig.rowOffset > 0) edConfig.rowOffset--;
+            edMoveCursor(key);
+            break;
         case ARROW_DOWN:
+            if (edConfig.rowOffset < edConfig.numRows) edConfig.rowOffset++;
+            edMoveCursor(key);
+            break;
         case ARROW_LEFT:
         case ARROW_RIGHT:
         case HOME:
@@ -137,11 +144,12 @@ void edDrawRows(astring *frame)
 {
     for (int y = 0; y < edConfig.winRows; y++)
     {
-        if (y < edConfig.numRows)
+        int off = edConfig.rowOffset;
+        if (y < (edConfig.numRows - off))
         {
             // limit text size to the window width
-            int len = edConfig.row[y].size > edConfig.winCols ? edConfig.winCols : edConfig.row[y].size;
-            astringAppend(frame, edConfig.row[y].string, len);
+            int len = edConfig.row[y + off].size > edConfig.winCols ? edConfig.winCols : edConfig.row[y + off].size;
+            astringAppend(frame, edConfig.row[y + off].string, len);
         }
         else if (y == edConfig.winRows/ 3)
         {
@@ -228,6 +236,7 @@ void edInit()
     edConfig.cy = 0;
     edConfig.row = calloc(100, sizeof(*edConfig.row));
     edConfig.numRows = 0;
+    edConfig.rowOffset = 0;
 
     // TODO(noxet): Handle window resize event
     if (termGetWindowSize(&edConfig.winRows, &edConfig.winCols) == -1) errExit("Failed to get window size");
