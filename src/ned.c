@@ -35,39 +35,49 @@ typedef struct
     edRow_s *row;
     int numRows;
     int rowOffset;
+    int colOffset;
 } edConfig_s;
 
 
 static edConfig_s edConfig;
 
 static FILE *logFile = NULL;
-#define LOG(format, ...) fprintf(logFile, format, __VA_ARGS__)
+#define LOG(format, ...) { fprintf(logFile, format, __VA_ARGS__); fflush(logFile); }
 
 void edMoveCursor(int key)
 {
     switch(key)
     {
         case ARROW_UP:
-            edConfig.cy--;
-            if (edConfig.cy < 0) edConfig.cy = 0;
+            if (edConfig.cy > 0) edConfig.cy--;
             break;
         case ARROW_DOWN:
-            edConfig.cy++;
-            if (edConfig.cy >= edConfig.winRows- 1) edConfig.cy = edConfig.winRows- 1;
+            if (edConfig.cy < edConfig.numRows - 1) edConfig.cy++;
             break;
         case ARROW_RIGHT:
-            edConfig.cx++;
-            if (edConfig.cx >= edConfig.winCols - 1) edConfig.cx = edConfig.winCols - 1;
+            // get the size of the column at the current row (cy)
+            if (edConfig.cx < edConfig.row[edConfig.cy].size - 1)
+            {
+                LOG("row[%d] length = %d\n", edConfig.cy, edConfig.row[edConfig.cy].size);
+                edConfig.cx++;
+            }
             break;
         case ARROW_LEFT:
-            edConfig.cx--;
-            if (edConfig.cx < 0) edConfig.cx = 0;
+            if (edConfig.cx > 0) edConfig.cx--;
             break;
         case HOME:
             edConfig.cx = 0;
             break;
         case END:
-            edConfig.cx = edConfig.winCols - 1;
+            // set cursor to the smallest of the window size and the current row length
+            if (edConfig.winCols < edConfig.row[edConfig.cy].size)
+            {
+                edConfig.cx = edConfig.winCols - 1;
+            }
+            else
+            {
+                edConfig.cx = edConfig.row[edConfig.cy].size - 1;
+            }
             break;
     }
 }
@@ -81,13 +91,7 @@ void edProcessKey()
         case ESC_KEY:
             break;
         case ARROW_UP:
-            if (edConfig.rowOffset > 0) edConfig.rowOffset--;
-            edMoveCursor(key);
-            break;
         case ARROW_DOWN:
-            if (edConfig.rowOffset < edConfig.numRows) edConfig.rowOffset++;
-            edMoveCursor(key);
-            break;
         case ARROW_LEFT:
         case ARROW_RIGHT:
         case HOME:
@@ -97,7 +101,7 @@ void edProcessKey()
         case PAGE_UP:
         case PAGE_DOWN:
             {
-                int times = edConfig.winRows;
+                int times = edConfig.winRows - 1;
                 while (times--) edMoveCursor(key == PAGE_UP ? ARROW_UP : ARROW_DOWN);
             }
             break;
@@ -140,6 +144,31 @@ void edDrawWelcomeMsg(astring *frame)
     }
 }
 
+void edScroll()
+{
+    if (edConfig.cy >= edConfig.winRows)
+    {
+        edConfig.rowOffset = edConfig.cy - edConfig.winRows + 1;
+        LOG("cy: %d, winrows: %d, offset: %d\n", edConfig.cy, edConfig.winRows, edConfig.rowOffset);
+    }
+    else
+    {
+        edConfig.rowOffset = 0;
+    }
+
+    LOG("cx: %d\n", edConfig.cx);
+    if (edConfig.cx >= edConfig.winCols)
+    {
+        edConfig.colOffset = edConfig.cx - edConfig.winCols + 1;
+        LOG("cx: %d, wincols: %d, offset: %d\n", edConfig.cx, edConfig.winCols, edConfig.colOffset);
+    }
+    else
+    {
+        LOG("%s\n", "coloffset = 0");
+        edConfig.colOffset = 0;
+    }
+}
+
 void edDrawRows(astring *frame)
 {
     for (int y = 0; y < edConfig.winRows; y++)
@@ -148,8 +177,11 @@ void edDrawRows(astring *frame)
         if (y < (edConfig.numRows - off))
         {
             // limit text size to the window width
-            int len = edConfig.row[y + off].size > edConfig.winCols ? edConfig.winCols : edConfig.row[y + off].size;
-            astringAppend(frame, edConfig.row[y + off].string, len);
+            edRow_s currRow = edConfig.row[y + off];
+            // do not scroll further than row size. Print at most the NULL char
+            int colOffset = (edConfig.colOffset <= currRow.size) ? edConfig.colOffset : currRow.size;
+            int len = (currRow.size - colOffset > edConfig.winCols) ? edConfig.winCols : currRow.size - colOffset;
+            astringAppend(frame, &currRow.string[colOffset], len);
         }
         else if (y == edConfig.winRows/ 3)
         {
@@ -172,6 +204,8 @@ void edDrawRows(astring *frame)
 
 void edRefreshScreen()
 {
+    edScroll();
+
     astring *frame = astringNew();
 
     astringAppend(frame, CURSOR_HIDE_CMD, CURSOR_HIDE_LEN);
@@ -182,7 +216,7 @@ void edRefreshScreen()
     // Set cursor position
     char cursorPos[32];
     // Terminal is 1-indexed, so we need to add 1 to the positions
-    int cursorPosLen = snprintf(cursorPos, sizeof(cursorPos), "\x1b[%d;%dH", edConfig.cy + 1, edConfig.cx + 1);
+    int cursorPosLen = snprintf(cursorPos, sizeof(cursorPos), "\x1b[%d;%dH", edConfig.cy  - edConfig.rowOffset + 1, edConfig.cx  - edConfig.colOffset + 1);
     astringAppend(frame, cursorPos, cursorPosLen);
 
     astringAppend(frame, CURSOR_SHOW_CMD, CURSOR_SHOW_LEN);
@@ -222,8 +256,6 @@ void edOpen(const char *filename)
         // remove newline char(s) if present and terminate string
         while (lineLen > 0 && (line[lineLen - 1] == '\n' || line[lineLen - 1] == '\r')) lineLen--;
         edAppendRow(line, lineLen);
-
-        LOG("reading string: %s, of length: %zu\n", line, lineLen);
     }
 
     free(line);
@@ -237,6 +269,7 @@ void edInit()
     edConfig.row = calloc(100, sizeof(*edConfig.row));
     edConfig.numRows = 0;
     edConfig.rowOffset = 0;
+    edConfig.colOffset = 0;
 
     // TODO(noxet): Handle window resize event
     if (termGetWindowSize(&edConfig.winRows, &edConfig.winCols) == -1) errExit("Failed to get window size");
