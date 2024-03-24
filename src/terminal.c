@@ -1,7 +1,6 @@
 #include "terminal.h"
 #include "utils.h"
 
-#include <asm-generic/ioctls.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
