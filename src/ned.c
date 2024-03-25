@@ -50,9 +50,11 @@ void edMoveCursor(int key)
     {
         case ARROW_UP:
             if (edConfig.cy > 0) edConfig.cy--;
+            if (edConfig.cx >= edConfig.row[edConfig.cy].size) edConfig.cx = edConfig.row[edConfig.cy].size - 1;
             break;
         case ARROW_DOWN:
             if (edConfig.cy < edConfig.numRows - 1) edConfig.cy++;
+            if (edConfig.cx >= edConfig.row[edConfig.cy].size) edConfig.cx = edConfig.row[edConfig.cy].size - 1;
             break;
         case ARROW_RIGHT:
             // get the size of the column at the current row (cy)
