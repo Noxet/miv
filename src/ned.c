@@ -236,13 +236,6 @@ void edRenderRow(edRow_s *row)
     row->rsize = 0;
     row->renderString = malloc(9 * row->size + 1);
 
-    for (int i = 0; i < row->size; i++)
-    {
-        row->renderString[i] = row->string[i];
-        row->rsize++;
-    }
-
-
     int idx = 0;
     while (row->string[idx])
     {
@@ -256,6 +249,7 @@ void edRenderRow(edRow_s *row)
                 }
                 break;
             default:
+                // just copy the chars as normal
                 row->renderString[row->rsize] = row->string[idx];
                 row->rsize++;
                 break;
