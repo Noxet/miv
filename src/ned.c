@@ -52,16 +52,9 @@ void edMoveCursor(int key)
     {
         case ARROW_UP:
             if (edConfig.cy > 0) edConfig.cy--;
-            // if cursor ends up past the line end, snap it to end of line
-            if (edConfig.cx >= edConfig.row[edConfig.cy].size) edConfig.cx = edConfig.row[edConfig.cy].size - 1;
-            // limit cx to 0 in case of empty line
-            if (edConfig.cx < 0) edConfig.cx = 0;
             break;
         case ARROW_DOWN:
             if (edConfig.cy < edConfig.numRows - 1) edConfig.cy++;
-            // if cursor ends up past the line end, snap it to end of line
-            if (edConfig.cx >= edConfig.row[edConfig.cy].size) edConfig.cx = edConfig.row[edConfig.cy].size - 1;
-            if (edConfig.cx < 0) edConfig.cx = 0;
             break;
         case ARROW_RIGHT:
             // get the size of the column at the current row (cy)
@@ -84,7 +77,15 @@ void edMoveCursor(int key)
                 edConfig.cx = edConfig.row[edConfig.cy].size - 1;
             }
             break;
+        default:
+            assert(false);
+            break;
     }
+
+    // if cursor ends up past the line end, snap it to end of line
+    if (edConfig.cx >= edConfig.row[edConfig.cy].size) edConfig.cx = edConfig.row[edConfig.cy].size - 1;
+    // limit cx to 0 in case of empty line
+    if (edConfig.cx < 0) edConfig.cx = 0;
 }
 
 void edProcessKey()
