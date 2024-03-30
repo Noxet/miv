@@ -27,7 +27,7 @@ typedef struct
     char *string;
     int size;
     char *renderString;
-    int rsize;
+    int renderSize;
 } edRow_s;
 
 typedef struct
@@ -60,7 +60,7 @@ void edMoveCursor(int key)
             break;
         case ARROW_RIGHT:
             // get the size of the column at the current row (cy)
-            if (edConfig.cx < edConfig.row[edConfig.cy].rsize - 1) edConfig.cx++;
+            if (edConfig.cx < edConfig.row[edConfig.cy].renderSize - 1) edConfig.cx++;
             break;
         case ARROW_LEFT:
             if (edConfig.cx > 0) edConfig.cx--;
@@ -70,13 +70,13 @@ void edMoveCursor(int key)
             break;
         case END:
             // set cursor to the smallest of the window size and the current row length
-            if (edConfig.winCols < edConfig.row[edConfig.cy].rsize)
+            if (edConfig.winCols < edConfig.row[edConfig.cy].renderSize)
             {
                 edConfig.cx = edConfig.winCols - 1;
             }
             else
             {
-                edConfig.cx = edConfig.row[edConfig.cy].rsize - 1;
+                edConfig.cx = edConfig.row[edConfig.cy].renderSize - 1;
             }
             break;
         default:
@@ -85,7 +85,7 @@ void edMoveCursor(int key)
     }
 
     // if cursor ends up past the line end, snap it to end of line
-    if (edConfig.cx >= edConfig.row[edConfig.cy].rsize) edConfig.cx = edConfig.row[edConfig.cy].rsize - 1;
+    if (edConfig.cx >= edConfig.row[edConfig.cy].renderSize) edConfig.cx = edConfig.row[edConfig.cy].renderSize - 1;
     // limit cx to 0 in case of empty line
     if (edConfig.cx < 0) edConfig.cx = 0;
 }
@@ -187,8 +187,8 @@ void edDrawRows(astring *frame)
             // limit text size to the window width
             edRow_s currRow = edConfig.row[y + off];
             // do not scroll further than row size. Print at most the NULL char
-            int colOffset = (edConfig.colOffset <= currRow.rsize) ? edConfig.colOffset : currRow.rsize;
-            int len = (currRow.rsize - colOffset > edConfig.winCols) ? edConfig.winCols : currRow.rsize - colOffset;
+            int colOffset = (edConfig.colOffset <= currRow.renderSize) ? edConfig.colOffset : currRow.renderSize;
+            int len = (currRow.renderSize - colOffset > edConfig.winCols) ? edConfig.winCols : currRow.renderSize - colOffset;
             astringAppend(frame, &currRow.renderString[colOffset], len);
         }
         else if (y == edConfig.winRows/ 3)
@@ -238,7 +238,7 @@ void edRenderRow(edRow_s *row)
 {
     // free previously allocated mem
     free(row->renderString);
-    row->rsize = 0;
+    row->renderSize = 0;
     size_t numTabs = 0;
     for (int i = 0; i < row->size; i++)
     {
@@ -253,20 +253,20 @@ void edRenderRow(edRow_s *row)
         {
             case '\t':
                 {
-                    row->renderString[row->rsize++] = ' ';
-                    while (row->rsize % NED_TAB_STOP != 0) row->renderString[row->rsize++] = ' ';
+                    row->renderString[row->renderSize++] = ' ';
+                    while (row->renderSize % NED_TAB_STOP != 0) row->renderString[row->renderSize++] = ' ';
                 }
                 break;
             default:
                 // just copy the chars as normal
-                row->renderString[row->rsize] = row->string[idx];
-                row->rsize++;
+                row->renderString[row->renderSize] = row->string[idx];
+                row->renderSize++;
                 break;
         }
         idx++;
     }
 
-    row->renderString[row->rsize] = '\0';
+    row->renderString[row->renderSize] = '\0';
 }
 
 void edAppendRow(char *line, size_t lineLen)
@@ -280,7 +280,7 @@ void edAppendRow(char *line, size_t lineLen)
     edConfig.row[edConfig.numRows].string = strdup(line);
 
     edConfig.row[edConfig.numRows].renderString = NULL;
-    edConfig.row[edConfig.numRows].rsize = 0;
+    edConfig.row[edConfig.numRows].renderSize = 0;
 
     edRenderRow(&edConfig.row[edConfig.numRows]);
 
