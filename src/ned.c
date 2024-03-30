@@ -244,7 +244,7 @@ void edRenderRow(edRow_s *row)
     {
         if (row->string[i] == '\t') numTabs++;
     }
-    row->renderString = malloc(row->size + (numTabs * NED_TAB_STOP) + 1);
+    row->renderString = malloc(row->size + numTabs * (NED_TAB_STOP - 1) + 1);
 
     int idx = 0;
     while (row->string[idx])
