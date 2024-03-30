@@ -54,11 +54,14 @@ void edMoveCursor(int key)
             if (edConfig.cy > 0) edConfig.cy--;
             // if cursor ends up past the line end, snap it to end of line
             if (edConfig.cx >= edConfig.row[edConfig.cy].size) edConfig.cx = edConfig.row[edConfig.cy].size - 1;
+            // limit cx to 0 in case of empty line
+            if (edConfig.cx < 0) edConfig.cx = 0;
             break;
         case ARROW_DOWN:
             if (edConfig.cy < edConfig.numRows - 1) edConfig.cy++;
             // if cursor ends up past the line end, snap it to end of line
             if (edConfig.cx >= edConfig.row[edConfig.cy].size) edConfig.cx = edConfig.row[edConfig.cy].size - 1;
+            if (edConfig.cx < 0) edConfig.cx = 0;
             break;
         case ARROW_RIGHT:
             // get the size of the column at the current row (cy)
@@ -183,7 +186,6 @@ void edDrawRows(astring *frame)
             // do not scroll further than row size. Print at most the NULL char
             int colOffset = (edConfig.colOffset <= currRow.rsize) ? edConfig.colOffset : currRow.rsize;
             int len = (currRow.rsize - colOffset > edConfig.winCols) ? edConfig.winCols : currRow.rsize - colOffset;
-            LOG("drawing string: %s\n", &currRow.renderString[colOffset]);
             astringAppend(frame, &currRow.renderString[colOffset], len);
         }
         else if (y == edConfig.winRows/ 3)
@@ -265,8 +267,6 @@ void edAppendRow(char *line, size_t lineLen)
     // TODO(noxet): reallocate row when we hit limit
 
     line[lineLen] = '\0';
-
-    LOG("append string: %s\n", line);
 
     edConfig.row[edConfig.numRows].size = lineLen;
     // TODO(noxet): free this memory later, in edClose?
