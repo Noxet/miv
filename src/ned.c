@@ -14,6 +14,8 @@
 
 #define NED_VERSION "0.1"
 
+#define NED_TAB_STOP 8
+
 #define ESC_KEY '\x1b'
 #define CTRL_KEY(k) ((k) & 0x1f)
 
@@ -58,7 +60,7 @@ void edMoveCursor(int key)
             break;
         case ARROW_RIGHT:
             // get the size of the column at the current row (cy)
-            if (edConfig.cx < edConfig.row[edConfig.cy].size - 1) edConfig.cx++;
+            if (edConfig.cx < edConfig.row[edConfig.cy].rsize - 1) edConfig.cx++;
             break;
         case ARROW_LEFT:
             if (edConfig.cx > 0) edConfig.cx--;
@@ -68,13 +70,13 @@ void edMoveCursor(int key)
             break;
         case END:
             // set cursor to the smallest of the window size and the current row length
-            if (edConfig.winCols < edConfig.row[edConfig.cy].size)
+            if (edConfig.winCols < edConfig.row[edConfig.cy].rsize)
             {
                 edConfig.cx = edConfig.winCols - 1;
             }
             else
             {
-                edConfig.cx = edConfig.row[edConfig.cy].size - 1;
+                edConfig.cx = edConfig.row[edConfig.cy].rsize - 1;
             }
             break;
         default:
@@ -83,7 +85,7 @@ void edMoveCursor(int key)
     }
 
     // if cursor ends up past the line end, snap it to end of line
-    if (edConfig.cx >= edConfig.row[edConfig.cy].size) edConfig.cx = edConfig.row[edConfig.cy].size - 1;
+    if (edConfig.cx >= edConfig.row[edConfig.cy].rsize) edConfig.cx = edConfig.row[edConfig.cy].rsize - 1;
     // limit cx to 0 in case of empty line
     if (edConfig.cx < 0) edConfig.cx = 0;
 }
@@ -237,7 +239,12 @@ void edRenderRow(edRow_s *row)
     // free previously allocated mem
     free(row->renderString);
     row->rsize = 0;
-    row->renderString = malloc(9 * row->size + 1);
+    size_t numTabs = 0;
+    for (int i = 0; i < row->size; i++)
+    {
+        if (row->string[i] == '\t') numTabs++;
+    }
+    row->renderString = malloc(row->size + (numTabs * NED_TAB_STOP) + 1);
 
     int idx = 0;
     while (row->string[idx])
@@ -246,9 +253,8 @@ void edRenderRow(edRow_s *row)
         {
             case '\t':
                 {
-                    char *tab = "    ";
-                    memcpy(&row->renderString[row->rsize], tab, 4);
-                    row->rsize += 4;
+                    row->renderString[row->rsize++] = ' ';
+                    while (row->rsize % NED_TAB_STOP != 0) row->renderString[row->rsize++] = ' ';
                 }
                 break;
             default:
