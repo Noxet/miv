@@ -41,6 +41,7 @@ typedef struct
     int numRows;
     int rowOffset;
     int colOffset;
+    char *filename;
 } edConfig_s;
 
 
@@ -145,8 +146,18 @@ void edDrawWelcomeMsg(astring *frame)
     }
 }
 
+void edDrawStatusBar(astring *frame)
+{
+    // TODO(noxet): make macros for colors
+    astringAppend(frame, "\x1b[7m", 4);
+    char status[256];
+    int statusLen = snprintf(status, sizeof(status), "[%s]\tlines in file: %d", edConfig.filename, edConfig.numRows);
+    astringAppend(frame, status, statusLen);
+    astringAppend(frame, "\x1b[m", 3);
+}
 
-static int edRowCxToRx(edRow_s *row, int cx)
+
+static inline int edRowCxToRx(edRow_s *row, int cx)
 {
     int rx = 0;
     for (int i = 0; i < cx; i++)
@@ -205,7 +216,7 @@ void edDrawRows(astring *frame)
             int len = (currRow.renderSize - colOffset > edConfig.winCols) ? edConfig.winCols : currRow.renderSize - colOffset;
             astringAppend(frame, &currRow.renderString[colOffset], len);
         }
-        else if (y == edConfig.winRows/ 3)
+        else if (y == edConfig.winRows / 3)
         {
             edDrawWelcomeMsg(frame);
         }
@@ -216,11 +227,8 @@ void edDrawRows(astring *frame)
 
         // Erase line by line as we print new text
         astringAppend(frame, DISPLAY_ERASE_LINE_CMD, DISPLAY_ERASE_LINE_LEN);
-        if (y < edConfig.winRows- 1)
-        {
-            // Don't print a newline on the last line, otherwise it's empty (no tilde)
-            astringAppend(frame, "\r\n", 2);
-        }
+        //if (y < edConfig.winRows - 1)
+        astringAppend(frame, "\r\n", 2);
     }
 }
 
@@ -234,6 +242,7 @@ void edRefreshScreen()
     astringAppend(frame, CURSOR_ORIGIN_CMD, CURSOR_ORIGIN_LEN);
 
     edDrawRows(frame);
+    edDrawStatusBar(frame);
 
     // Set cursor position
     char cursorPos[32];
@@ -307,6 +316,8 @@ void edOpen(const char *filename)
 
     FILE *inputFile = fopen(filename, "r");
     if (!inputFile) errExit("Failed to open file: %s", filename);
+    free(edConfig.filename);
+    edConfig.filename = strdup(filename);
 
     char *line = NULL;
     size_t bufferSize = 0;
@@ -334,9 +345,13 @@ void edInit()
     edConfig.numRows = 0;
     edConfig.rowOffset = 0;
     edConfig.colOffset = 0;
+    edConfig.filename = NULL;
 
     // TODO(noxet): Handle window resize event
     if (termGetWindowSize(&edConfig.winRows, &edConfig.winCols) == -1) errExit("Failed to get window size");
+    // make room for the status bar at the end
+    // TODO(noxet): Fix this later by using "pane" size or similar, which is independent of window size
+    edConfig.winRows -= 1;
 
 
     printf("window size, rows: %d, cols: %d\n", edConfig.winRows, edConfig.winCols);
