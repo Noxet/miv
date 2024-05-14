@@ -32,10 +32,11 @@ typedef struct
 
 typedef struct
 {
-    int winRows;   // window size
+    int winRows;    // window size
     int winCols;
-    int cx;     // cursor pos
+    int cx;         // cursor pos
     int cy;
+    int rx;         // render pos
     edRow_s *row;
     int numRows;
     int rowOffset;
@@ -69,15 +70,7 @@ void edMoveCursor(int key)
             edConfig.cx = 0;
             break;
         case END:
-            // set cursor to the smallest of the window size and the current row length
-            if (edConfig.winCols < edConfig.row[edConfig.cy].renderSize)
-            {
-                edConfig.cx = edConfig.winCols - 1;
-            }
-            else
-            {
-                edConfig.cx = edConfig.row[edConfig.cy].renderSize - 1;
-            }
+            edConfig.cx = edConfig.row[edConfig.cy].size;
             break;
         default:
             assert(false);
@@ -152,8 +145,29 @@ void edDrawWelcomeMsg(astring *frame)
     }
 }
 
+
+static int edRowCxToRx(edRow_s *row, int cx)
+{
+    int rx = 0;
+    for (int i = 0; i < cx; i++)
+    {
+        if (row->string[i] == '\t') rx += (NED_TAB_STOP - 1) - (rx % NED_TAB_STOP);
+        rx++;
+    }
+
+    return rx;
+}
+
+
 void edScroll()
 {
+    edConfig.rx = 0;
+
+    if (edConfig.cy < edConfig.numRows)
+    {
+        edConfig.rx = edRowCxToRx(&edConfig.row[edConfig.cy], edConfig.cx);
+    }
+
     if (edConfig.cy >= edConfig.winRows)
     {
         edConfig.rowOffset = edConfig.cy - edConfig.winRows + 1;
@@ -164,11 +178,11 @@ void edScroll()
         edConfig.rowOffset = 0;
     }
 
-    LOG("cx: %d\n", edConfig.cx);
-    if (edConfig.cx >= edConfig.winCols)
+    LOG("rx: %d\n", edConfig.rx);
+    if (edConfig.rx >= edConfig.winCols)
     {
-        edConfig.colOffset = edConfig.cx - edConfig.winCols + 1;
-        LOG("cx: %d, wincols: %d, offset: %d\n", edConfig.cx, edConfig.winCols, edConfig.colOffset);
+        edConfig.colOffset = edConfig.rx - edConfig.winCols + 1;
+        LOG("rx: %d, wincols: %d, offset: %d\n", edConfig.rx, edConfig.winCols, edConfig.colOffset);
     }
     else
     {
@@ -224,7 +238,7 @@ void edRefreshScreen()
     // Set cursor position
     char cursorPos[32];
     // Terminal is 1-indexed, so we need to add 1 to the positions
-    int cursorPosLen = snprintf(cursorPos, sizeof(cursorPos), "\x1b[%d;%dH", edConfig.cy  - edConfig.rowOffset + 1, edConfig.cx  - edConfig.colOffset + 1);
+    int cursorPosLen = snprintf(cursorPos, sizeof(cursorPos), "\x1b[%d;%dH", edConfig.cy  - edConfig.rowOffset + 1, edConfig.rx  - edConfig.colOffset + 1);
     astringAppend(frame, cursorPos, cursorPosLen);
 
     astringAppend(frame, CURSOR_SHOW_CMD, CURSOR_SHOW_LEN);
@@ -300,7 +314,7 @@ void edOpen(const char *filename)
     while ((lineLen = getline(&line, &bufferSize, inputFile)) != -1)
     {
         // TODO(noxet): hack to avoid BO, fix later with reallocations
-        if (edConfig.numRows >= 100) break;
+        if (edConfig.numRows >= 1000) break;
 
         // remove newline char(s) if present and terminate string
         while (lineLen > 0 && (line[lineLen - 1] == '\n' || line[lineLen - 1] == '\r')) lineLen--;
@@ -315,7 +329,8 @@ void edInit()
 {
     edConfig.cx = 0;
     edConfig.cy = 0;
-    edConfig.row = calloc(100, sizeof(*edConfig.row));
+    edConfig.rx = 0;
+    edConfig.row = calloc(1000, sizeof(*edConfig.row));
     edConfig.numRows = 0;
     edConfig.rowOffset = 0;
     edConfig.colOffset = 0;

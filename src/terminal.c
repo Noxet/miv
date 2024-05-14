@@ -85,8 +85,8 @@ int termEnableRawMode()
             INPCK | ISTRIP | IXON | PARMRK);
     term.c_oflag &= ~OPOST;
 
-    term.c_cc[VMIN] = 0;
-    term.c_cc[VTIME] = 1;
+    term.c_cc[VMIN] = 0;    // make it a pure timed read
+    term.c_cc[VTIME] = 1;   // set read timeout to 100 ms
 
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &term) == -1) return -1;
 
