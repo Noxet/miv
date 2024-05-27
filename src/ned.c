@@ -8,7 +8,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <assert.h>
 
@@ -42,6 +44,8 @@ typedef struct
     int rowOffset;
     int colOffset;
     char *filename;
+    char statusMsg[80];
+    time_t statusMsgTime;
 } edConfig_s;
 
 
@@ -151,9 +155,36 @@ void edDrawStatusBar(astring *frame)
     // TODO(noxet): make macros for colors
     astringAppend(frame, "\x1b[7m", 4);
     char status[256];
-    int statusLen = snprintf(status, sizeof(status), "[%s]\tlines in file: %d", edConfig.filename, edConfig.numRows);
+    char *filename = (edConfig.filename == NULL) ? "No Name" : edConfig.filename;
+    int statusLen = snprintf(status, sizeof(status), "[%.20s] - lines in file: %d", filename, edConfig.numRows);
     astringAppend(frame, status, statusLen);
+
+    // right-adjusted status bar
+    char rstatus[32];
+    int rstatusLen = snprintf(rstatus, sizeof(rstatus), "[%d / %d]", edConfig.cy + 1, edConfig.numRows);
+    // fill the rest of the status bar with white color
+    while (statusLen < edConfig.winCols - rstatusLen)
+    {
+        astringAppend(frame, " ", 1);
+        statusLen++;
+    }
+
+    astringAppend(frame, rstatus, rstatusLen);
+
     astringAppend(frame, "\x1b[m", 3);
+    astringAppend(frame, "\r\n", 2);
+}
+
+
+void edDrawMessageBar(astring *frame)
+{
+    // clear the line
+    astringAppend(frame, "\x1b[K", 3);
+    size_t msgLen = strlen(edConfig.statusMsg);
+    if (msgLen && (time(NULL) - edConfig.statusMsgTime < 5))
+    {
+        astringAppend(frame, edConfig.statusMsg, msgLen);
+    }
 }
 
 
@@ -243,6 +274,7 @@ void edRefreshScreen()
 
     edDrawRows(frame);
     edDrawStatusBar(frame);
+    edDrawMessageBar(frame);
 
     // Set cursor position
     char cursorPos[32];
@@ -255,6 +287,15 @@ void edRefreshScreen()
     write(STDOUT_FILENO, astringGetString(frame), astringGetLen(frame));
     
     astringFree(&frame);
+}
+
+void edSetStatusMessage(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(edConfig.statusMsg, sizeof(edConfig.statusMsg), fmt, ap);
+    va_end(ap);
+    edConfig.statusMsgTime = time(NULL);
 }
 
 void edRenderRow(edRow_s *row)
@@ -346,12 +387,14 @@ void edInit()
     edConfig.rowOffset = 0;
     edConfig.colOffset = 0;
     edConfig.filename = NULL;
+    edConfig.statusMsg[0] = '\0';
+    edConfig.statusMsgTime = 0;
 
     // TODO(noxet): Handle window resize event
     if (termGetWindowSize(&edConfig.winRows, &edConfig.winCols) == -1) errExit("Failed to get window size");
-    // make room for the status bar at the end
+    // make room for the status bar and messages at the end
     // TODO(noxet): Fix this later by using "pane" size or similar, which is independent of window size
-    edConfig.winRows -= 1;
+    edConfig.winRows -= 2;
 
 
     printf("window size, rows: %d, cols: %d\n", edConfig.winRows, edConfig.winCols);
@@ -372,6 +415,8 @@ int main(int argc, char *argv[])
 
     // disable stdout buffering
     setbuf(stdout, NULL);
+
+    edSetStatusMessage("HELP: CTRL-Q to quit");
 
     while (nedRunning)
     {

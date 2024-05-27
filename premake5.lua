@@ -1,11 +1,12 @@
 workspace "ned"
-    configurations { "Debug", "Release", "ASAN" }
+    configurations { "Debug", "Release", "ASAN", "MSAN" }
 
 project "ned"
     kind "ConsoleApp"
     language "C"
     cdialect "gnu11"
     targetdir "build/%{cfg.buildcfg}"
+    toolset "clang"
     
     files
     {
@@ -27,6 +28,12 @@ project "ned"
     filter "configurations:ASAN"
         buildoptions { "-fsanitize=address" }
         linkoptions { "-lasan" }
+        defines { "DEBUG" }
+        symbols "On"
+
+    filter "configurations:MSAN"
+        buildoptions { "-fsanitize=memory" }
+        linkoptions { "-fsanitize=memory" }
         defines { "DEBUG" }
         symbols "On"
 
