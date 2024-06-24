@@ -22,6 +22,8 @@
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 void edInsertChar(int c);
+void edSaveFile(const char *filename);
+void edSetStatusMessage(const char *fmt, ...);
 
 static bool nedRunning = true;
 
@@ -96,7 +98,7 @@ void edProcessKey()
     switch (key)
     {
         case ESC_KEY:
-        case CTRL_KEY('l'):
+        case CTRL_KEY('l'):     // screen refresh not needed since we do it on every update
             // TODO
             break;
         case CTRL_KEY('h'):
@@ -125,7 +127,8 @@ void edProcessKey()
             write(STDOUT_FILENO, "\x1b[H", 3);
             break;
         case CTRL_KEY('w'):
-            // TODO: save file
+            edSaveFile(edConfig.filename);
+            edSetStatusMessage("File saved successfully!");
             break;
         case '\r':
             printf("\r\n");
@@ -372,6 +375,9 @@ void edRowInsertChar(edRow_s *row, int at, int c)
     edRenderRow(row);
 }
 
+/*
+ * Inserts a character into the text under the cursor
+ */
 void edInsertChar(int c)
 {
     if (edConfig.cy == edConfig.numRows)
@@ -381,6 +387,38 @@ void edInsertChar(int c)
 
     edRowInsertChar(&edConfig.row[edConfig.cy], edConfig.cx, c);
     edConfig.cx++;
+}
+
+/*
+ * Converts the row struct to a normal, NULL-terminated string to be written to file
+ */
+char *edRowsToString(int *bufLen)
+{
+    int totLen = 0;
+    for (int i = 0; i < edConfig.numRows; i++)
+    {
+        totLen += edConfig.row[i].size + 1;
+    }
+    totLen++; // NULL byte
+
+    *bufLen = totLen;
+    LOG("Total string len: %d", totLen);
+
+    char *buf = malloc(totLen);
+    assert(buf != NULL);
+
+    char *p = buf;
+    for (int i = 0; i < edConfig.numRows; i++)
+    {
+        memcpy(p, edConfig.row[i].string, edConfig.row[i].size);
+        p += edConfig.row[i].size;
+        *p = '\n';
+        p++;
+    }
+
+    *p = '\0';
+
+    return buf;
 }
 
 void edOpen(const char *filename)
@@ -407,6 +445,22 @@ void edOpen(const char *filename)
 
     free(line);
     fclose(inputFile);
+}
+
+void edSaveFile(const char *filename)
+{
+    // TODO(noxet): handle this case later
+    if (filename == NULL) return;
+
+    int bufLen = 0;
+    char *content = edRowsToString(&bufLen);
+
+    FILE *fd = fopen(filename, "w");
+    if (!fd) errExit("Failed to open file: %s", filename);
+    int ret = fwrite(content, 1, bufLen, fd);
+    if (ret != bufLen) errExit("Failed to save all bytes to file: %s", filename);
+    fclose(fd);
+    free(content);
 }
 
 void edInit()
@@ -448,7 +502,7 @@ int main(int argc, char *argv[])
     // disable stdout buffering
     setbuf(stdout, NULL);
 
-    edSetStatusMessage("HELP: CTRL-Q to quit");
+    edSetStatusMessage("HELP: CTRL-S to save | CTRL-Q to quit");
 
     while (nedRunning)
     {
