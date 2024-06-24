@@ -18,9 +18,10 @@
 
 #define NED_TAB_STOP 8
 
-#define ESC_KEY '\x1b'
+//#define ESC_KEY '\x1b'
 #define CTRL_KEY(k) ((k) & 0x1f)
 
+void edInsertChar(int c);
 
 static bool nedRunning = true;
 
@@ -95,6 +96,13 @@ void edProcessKey()
     switch (key)
     {
         case ESC_KEY:
+        case CTRL_KEY('l'):
+            // TODO
+            break;
+        case CTRL_KEY('h'):
+        case BACKSPACE:
+        case DELETE:
+            // TODO
             break;
         case ARROW_UP:
         case ARROW_DOWN:
@@ -116,11 +124,14 @@ void edProcessKey()
             write(STDOUT_FILENO, "\x1b[2J", 4);
             write(STDOUT_FILENO, "\x1b[H", 3);
             break;
+        case CTRL_KEY('w'):
+            // TODO: save file
+            break;
         case '\r':
             printf("\r\n");
             break;
         default:
-            putchar(key);
+            edInsertChar(key);
             break;
     }
 }
@@ -349,6 +360,27 @@ void edAppendRow(char *line, size_t lineLen)
     edRenderRow(&edConfig.row[edConfig.numRows]);
 
     edConfig.numRows++;
+}
+
+void edRowInsertChar(edRow_s *row, int at, int c)
+{
+    if (at < 0 || at > row->size) at = row->size;
+    row->string = realloc(row->string, row->size + 2);
+    memmove(&row->string[at + 1], &row->string[at], row->size - at + 1);
+    row->size++;
+    row->string[at] = c;
+    edRenderRow(row);
+}
+
+void edInsertChar(int c)
+{
+    if (edConfig.cy == edConfig.numRows)
+    {
+        edAppendRow("", 0);
+    }
+
+    edRowInsertChar(&edConfig.row[edConfig.cy], edConfig.cx, c);
+    edConfig.cx++;
 }
 
 void edOpen(const char *filename)

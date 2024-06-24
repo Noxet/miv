@@ -15,6 +15,7 @@ typedef enum
 {
     ESC_KEY         = '\x1b',
     LEFT_BRACKET    = '[',
+    BACKSPACE       = 127,
 
     // Choose numbers of out real character range
     ARROW_UP        = 1000,
