@@ -17,6 +17,7 @@
 #define NED_VERSION "0.1"
 
 #define NED_TAB_STOP 8
+#define NED_QUIT_TIMES 2
 
 //#define ESC_KEY '\x1b'
 #define CTRL_KEY(k) ((k) & 0x1f)
@@ -49,6 +50,7 @@ typedef struct
     char *filename;
     char statusMsg[80];
     time_t statusMsgTime;
+    bool dirty;
 } edConfig_s;
 
 
@@ -93,6 +95,7 @@ void edMoveCursor(int key)
 
 void edProcessKey()
 {
+    static int quitTimes = NED_QUIT_TIMES;
     int key = termReadKey();
 
     switch (key)
@@ -122,10 +125,21 @@ void edProcessKey()
             }
             break;
         case CTRL_KEY('q'):
-            nedRunning = false;
+            if (edConfig.dirty)
+            {
+                edSetStatusMessage("File modified, press CTRL-Q again to discard changes and quit");
+                quitTimes--;
+                if (quitTimes == 0) nedRunning = false;
+            }
+            else
+            {
+                nedRunning = false;
+            }
+
             write(STDOUT_FILENO, "\x1b[2J", 4);
             write(STDOUT_FILENO, "\x1b[H", 3);
-            break;
+            // we need to return here, to not reset the quitTime counter at the end
+            return;
         case CTRL_KEY('w'):
             edSaveFile(edConfig.filename);
             edSetStatusMessage("File saved successfully!");
@@ -137,6 +151,8 @@ void edProcessKey()
             edInsertChar(key);
             break;
     }
+
+    quitTimes = NED_QUIT_TIMES;
 }
 
 void edDrawWelcomeMsg(astring *frame)
@@ -170,7 +186,8 @@ void edDrawStatusBar(astring *frame)
     astringAppend(frame, "\x1b[7m", 4);
     char status[256];
     char *filename = (edConfig.filename == NULL) ? "No Name" : edConfig.filename;
-    int statusLen = snprintf(status, sizeof(status), "[%.20s] - lines in file: %d", filename, edConfig.numRows);
+    char *dirty = (edConfig.dirty) ? "(modified)" : "";
+    int statusLen = snprintf(status, sizeof(status), "[%.20s] - %d lines %s", filename, edConfig.numRows, dirty);
     astringAppend(frame, status, statusLen);
 
     // right-adjusted status bar
@@ -363,6 +380,8 @@ void edAppendRow(char *line, size_t lineLen)
     edRenderRow(&edConfig.row[edConfig.numRows]);
 
     edConfig.numRows++;
+
+    edConfig.dirty = true;
 }
 
 void edRowInsertChar(edRow_s *row, int at, int c)
@@ -387,6 +406,8 @@ void edInsertChar(int c)
 
     edRowInsertChar(&edConfig.row[edConfig.cy], edConfig.cx, c);
     edConfig.cx++;
+
+    edConfig.dirty = true;
 }
 
 /*
@@ -445,6 +466,9 @@ void edOpen(const char *filename)
 
     free(line);
     fclose(inputFile);
+
+    // since we call appendRow here, it will be falsely set to dirty
+    edConfig.dirty = false;
 }
 
 void edSaveFile(const char *filename)
@@ -461,6 +485,7 @@ void edSaveFile(const char *filename)
     if (ret != bufLen) errExit("Failed to save all bytes to file: %s", filename);
     fclose(fd);
     free(content);
+    edConfig.dirty = false;
 }
 
 void edInit()
@@ -475,6 +500,7 @@ void edInit()
     edConfig.filename = NULL;
     edConfig.statusMsg[0] = '\0';
     edConfig.statusMsgTime = 0;
+    edConfig.dirty = false;
 
     // TODO(noxet): Handle window resize event
     if (termGetWindowSize(&edConfig.winRows, &edConfig.winCols) == -1) errExit("Failed to get window size");
