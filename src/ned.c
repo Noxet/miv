@@ -52,6 +52,7 @@ typedef struct
 
 
 void edInsertChar(int c);
+void edDeleteChar();
 void edSaveFile(const char *filename);
 void edSetStatusMessage(const char *fmt, ...);
 void edRowDeleteChar(edRow_s *row, int at);
@@ -110,7 +111,8 @@ void edProcessKey()
         case CTRL_KEY('h'):
         case BACKSPACE:
         case DELETE:
-            edRowDeleteChar(&edConfig.row[edConfig.cy], edConfig.cx);
+            if (key == DELETE) edMoveCursor(ARROW_RIGHT);
+            edDeleteChar();
             break;
         case ARROW_UP:
         case ARROW_DOWN:
@@ -333,6 +335,10 @@ void edSetStatusMessage(const char *fmt, ...)
     edConfig.statusMsgTime = time(NULL);
 }
 
+/**
+ * Row operations
+ */
+
 void edRenderRow(edRow_s *row)
 {
     // free previously allocated mem
@@ -388,18 +394,6 @@ void edAppendRow(char *line, size_t lineLen)
     edConfig.dirty = true;
 }
 
-void edRowDeleteChar(edRow_s *row, int at)
-{
-    if (at <= 0) return;
-    memmove(&row->string[at - 1], &row->string[at], row->size - at + 1);
-    row->size--;
-    //row->string = realloc(row->string, row->size - 1);
-    edRenderRow(row);
-
-    edConfig.cx--;
-    edConfig.dirty = true;
-}
-
 void edRowInsertChar(edRow_s *row, int at, int c)
 {
     if (at < 0 || at > row->size) at = row->size;
@@ -408,6 +402,15 @@ void edRowInsertChar(edRow_s *row, int at, int c)
     row->size++;
     row->string[at] = c;
     row->string[row->size] = '\0';
+    edRenderRow(row);
+}
+
+void edRowDeleteChar(edRow_s *row, int at)
+{
+    if (at < 0) return;
+    memmove(&row->string[at], &row->string[at + 1], row->size - at);
+    row->size--;
+    //row->string = realloc(row->string, row->size - 1);
     edRenderRow(row);
 }
 
@@ -424,6 +427,17 @@ void edInsertChar(int c)
     edRowInsertChar(&edConfig.row[edConfig.cy], edConfig.cx, c);
     edConfig.cx++;
 
+    edConfig.dirty = true;
+}
+
+void edDeleteChar()
+{
+    if (edConfig.cy == edConfig.numRows) return;
+    if (edConfig.cx <= 0) return;
+
+    edRow_s *row = &edConfig.row[edConfig.cy];
+    edRowDeleteChar(row, edConfig.cx - 1);
+    edConfig.cx--;
     edConfig.dirty = true;
 }
 
