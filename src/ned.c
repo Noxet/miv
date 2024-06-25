@@ -22,9 +22,6 @@
 //#define ESC_KEY '\x1b'
 #define CTRL_KEY(k) ((k) & 0x1f)
 
-void edInsertChar(int c);
-void edSaveFile(const char *filename);
-void edSetStatusMessage(const char *fmt, ...);
 
 static bool nedRunning = true;
 
@@ -52,6 +49,12 @@ typedef struct
     time_t statusMsgTime;
     bool dirty;
 } edConfig_s;
+
+
+void edInsertChar(int c);
+void edSaveFile(const char *filename);
+void edSetStatusMessage(const char *fmt, ...);
+void edRowDeleteChar(edRow_s *row, int at);
 
 
 static edConfig_s edConfig;
@@ -88,7 +91,7 @@ void edMoveCursor(int key)
     }
 
     // if cursor ends up past the line end, snap it to end of line
-    if (edConfig.cx >= edConfig.row[edConfig.cy].renderSize) edConfig.cx = edConfig.row[edConfig.cy].renderSize - 1;
+    if (edConfig.cx >= edConfig.row[edConfig.cy].size) edConfig.cx = edConfig.row[edConfig.cy].size - 1;
     // limit cx to 0 in case of empty line
     if (edConfig.cx < 0) edConfig.cx = 0;
 }
@@ -107,7 +110,7 @@ void edProcessKey()
         case CTRL_KEY('h'):
         case BACKSPACE:
         case DELETE:
-            // TODO
+            edRowDeleteChar(&edConfig.row[edConfig.cy], edConfig.cx);
             break;
         case ARROW_UP:
         case ARROW_DOWN:
@@ -251,6 +254,7 @@ void edScroll()
         edConfig.rowOffset = 0;
     }
 
+    LOG("cx: %d\n", edConfig.cx);
     LOG("rx: %d\n", edConfig.rx);
     if (edConfig.rx >= edConfig.winCols)
     {
@@ -384,13 +388,26 @@ void edAppendRow(char *line, size_t lineLen)
     edConfig.dirty = true;
 }
 
+void edRowDeleteChar(edRow_s *row, int at)
+{
+    if (at <= 0) return;
+    memmove(&row->string[at - 1], &row->string[at], row->size - at + 1);
+    row->size--;
+    //row->string = realloc(row->string, row->size - 1);
+    edRenderRow(row);
+
+    edConfig.cx--;
+    edConfig.dirty = true;
+}
+
 void edRowInsertChar(edRow_s *row, int at, int c)
 {
     if (at < 0 || at > row->size) at = row->size;
-    row->string = realloc(row->string, row->size + 2);
+    row->string = realloc(row->string, row->size + 2); // +2 for new char and NULL-byte at the end
     memmove(&row->string[at + 1], &row->string[at], row->size - at + 1);
     row->size++;
     row->string[at] = c;
+    row->string[row->size] = '\0';
     edRenderRow(row);
 }
 
