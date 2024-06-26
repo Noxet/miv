@@ -430,10 +430,28 @@ void edInsertChar(int c)
     edConfig.dirty = true;
 }
 
+void edFreeRow(edRow_s *row)
+{
+    free(row->string);
+    free(row->renderString);
+}
+
+void edDeleteRow(int atY)
+{
+    if (atY < 0 || atY > edConfig.numRows) return;
+    edFreeRow(&edConfig.row[atY]);
+    memmove(&edConfig.row[atY], &edConfig.row[atY + 1], sizeof(edRow_s) * (edConfig.numRows - atY - 1));
+    edConfig.numRows--;
+    edConfig.dirty = true;
+}
+
 void edDeleteChar()
 {
     if (edConfig.cy == edConfig.numRows) return;
-    if (edConfig.cx <= 0) return;
+    if (edConfig.cx <= 0)
+    {
+        edDeleteRow(edConfig.cy);
+    }
 
     edRow_s *row = &edConfig.row[edConfig.cy];
     edRowDeleteChar(row, edConfig.cx - 1);
