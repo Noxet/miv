@@ -53,6 +53,7 @@ typedef struct
 
 void edInsertChar(int c);
 void edDeleteChar();
+void edNewLine();
 void edSaveFile(const char *filename);
 void edSetStatusMessage(const char *fmt, ...);
 void edRowDeleteChar(edRow_s *row, int at);
@@ -126,6 +127,11 @@ void edProcessKey()
             }
             edDeleteChar();
             break;
+        case ENTER_KEY:
+            edNewLine();
+            break;
+
+        /* ARROW KEYS */
         case ARROW_UP:
         case ARROW_DOWN:
         case ARROW_LEFT:
@@ -160,9 +166,6 @@ void edProcessKey()
         case CTRL_KEY('w'):
             edSaveFile(edConfig.filename);
             edSetStatusMessage("File saved successfully!");
-            break;
-        case '\r':
-            printf("\r\n");
             break;
         default:
             edInsertChar(key);
@@ -386,20 +389,21 @@ void edRenderRow(edRow_s *row)
     row->renderString[row->renderSize] = '\0';
 }
 
-void edAppendRow(char *line, size_t lineLen)
+void edInsertRow(int at, char *line, size_t lineLen)
 {
     // TODO(noxet): reallocate row when we hit limit
+    memmove(&edConfig.row[at + 1], &edConfig.row[at], sizeof(edRow_s) * (edConfig.numRows - at));
 
     line[lineLen] = '\0';
 
-    edConfig.row[edConfig.numRows].size = lineLen;
+    edConfig.row[at].size = lineLen;
     // TODO(noxet): free this memory later, in edClose?
-    edConfig.row[edConfig.numRows].string = strdup(line);
+    edConfig.row[at].string = strdup(line);
 
-    edConfig.row[edConfig.numRows].renderString = NULL;
-    edConfig.row[edConfig.numRows].renderSize = 0;
+    edConfig.row[at].renderString = NULL;
+    edConfig.row[at].renderSize = 0;
 
-    edRenderRow(&edConfig.row[edConfig.numRows]);
+    edRenderRow(&edConfig.row[at]);
 
     edConfig.numRows++;
 
@@ -445,7 +449,7 @@ void edInsertChar(int c)
 {
     if (edConfig.cy == edConfig.numRows)
     {
-        edAppendRow("", 0);
+        edInsertRow(edConfig.numRows, "", 0);
     }
 
     edRowInsertChar(&edConfig.row[edConfig.cy], edConfig.cx, c);
@@ -489,6 +493,24 @@ void edDeleteChar()
     }
 
     edConfig.dirty = true;
+}
+
+void edNewLine()
+{
+    edRow_s *row = &edConfig.row[edConfig.cy];
+
+    char *s = &row->string[edConfig.cx];
+    int sSize = row->size - edConfig.cx;
+    // insert row will strdup the string so we have a real copy of it
+    edInsertRow(edConfig.cy + 1, s, sSize);
+    
+    // TODO(noxet): cleanup unused mem?
+    row->string[edConfig.cx] = '\0';
+    row->size -= sSize;
+    edRenderRow(row);
+
+    edConfig.cx = 0;
+    edConfig.cy++;
 }
 
 /*
@@ -542,7 +564,7 @@ void edOpen(const char *filename)
 
         // remove newline char(s) if present and terminate string
         while (lineLen > 0 && (line[lineLen - 1] == '\n' || line[lineLen - 1] == '\r')) lineLen--;
-        edAppendRow(line, lineLen);
+        edInsertRow(edConfig.numRows, line, lineLen);
     }
 
     free(line);

@@ -14,6 +14,7 @@
 typedef enum
 {
     ESC_KEY         = '\x1b',
+    ENTER_KEY       = '\x0D',
     LEFT_BRACKET    = '[',
     BACKSPACE       = 127,
 
