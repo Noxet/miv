@@ -465,6 +465,7 @@ void edDeleteChar()
 
     if (edConfig.cx <= 0)
     {
+        edConfig.cx = edConfig.row[edConfig.cy - 1].size;
         edDeleteRow(edConfig.cy);
         edConfig.cy--;
     }
