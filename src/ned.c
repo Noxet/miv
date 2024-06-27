@@ -414,6 +414,18 @@ void edRowDeleteChar(edRow_s *row, int at)
     edRenderRow(row);
 }
 
+void edRowAppendString(edRow_s *row, char *str)
+{
+    size_t strLen = strlen(str);
+
+    row->string = realloc(row->string, row->size + strLen + 1);
+    strcat(row->string, str);
+    row->size += strLen;
+
+    edRenderRow(row);
+    edConfig.dirty = true;
+}
+
 /*
  * Inserts a character into the text under the cursor
  */
@@ -438,7 +450,8 @@ void edFreeRow(edRow_s *row)
 
 void edDeleteRow(int atY)
 {
-    if (atY < 0 || atY > edConfig.numRows) return;
+    if (atY <= 0 || atY > edConfig.numRows) return;
+    edRowAppendString(&edConfig.row[atY - 1], edConfig.row[atY].string);
     edFreeRow(&edConfig.row[atY]);
     memmove(&edConfig.row[atY], &edConfig.row[atY + 1], sizeof(edRow_s) * (edConfig.numRows - atY - 1));
     edConfig.numRows--;
@@ -448,14 +461,20 @@ void edDeleteRow(int atY)
 void edDeleteChar()
 {
     if (edConfig.cy == edConfig.numRows) return;
+    if (edConfig.cx == 0 && edConfig.cy == 0) return;
+
     if (edConfig.cx <= 0)
     {
         edDeleteRow(edConfig.cy);
+        edConfig.cy--;
+    }
+    else
+    {
+        edRow_s *row = &edConfig.row[edConfig.cy];
+        edRowDeleteChar(row, edConfig.cx - 1);
+        edConfig.cx--;
     }
 
-    edRow_s *row = &edConfig.row[edConfig.cy];
-    edRowDeleteChar(row, edConfig.cx - 1);
-    edConfig.cx--;
     edConfig.dirty = true;
 }
 
