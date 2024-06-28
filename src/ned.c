@@ -16,7 +16,7 @@
 
 #define NED_VERSION "0.1"
 
-#define NED_TAB_STOP 8
+#define NED_TAB_STOP 4
 #define NED_QUIT_TIMES 2
 
 //#define ESC_KEY '\x1b'
