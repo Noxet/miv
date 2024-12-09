@@ -53,6 +53,9 @@ typedef struct
 } edConfig_s;
 
 
+typedef void (*promptCallback)(char *, int);
+
+
 void edInsertChar(int c);
 void edDeleteChar();
 void edNewLine();
@@ -60,6 +63,7 @@ void edSaveFile(const char *filename);
 void edSetStatusMessage(const char *fmt, ...);
 void edRowDeleteChar(edRow_s *row, int at);
 void edFind(void);
+void edIncrementalFind(void);
 
 
 static edConfig_s edConfig;
@@ -172,6 +176,9 @@ void edProcessKey()
             break;
         case CTRL_KEY('f'):
             edFind();
+            break;
+        case CTRL_KEY('g'):
+            edIncrementalFind();
             break;
         case CTRL_KEY('n'):
             break;
@@ -521,7 +528,7 @@ void edNewLine()
     edConfig.cy++;
 }
 
-char *edPrompt(char *prompt)
+char *edPrompt(char *prompt, promptCallback callback)
 {
     size_t bufSize = 128;
     char *buf = malloc(bufSize);
@@ -569,6 +576,8 @@ char *edPrompt(char *prompt)
                 buf[bufLen] = '\0';
             }
         }
+
+        if (callback) callback(buf, bufLen);
     }
 }
 
@@ -607,7 +616,7 @@ char *edRowsToString(int *bufLen)
 
 void edFind(void)
 {
-    char *query = edPrompt("Search: %s (ESC to cancel)");
+    char *query = edPrompt("Search: %s (ESC to cancel)", NULL);
     if (!query) return;
 
     for (int i = 0; i < edConfig.numRows; i++)
@@ -620,6 +629,27 @@ void edFind(void)
         break;
     }
 
+    free(query);
+}
+
+
+void edIncrFind_cb(char *buf, int len)
+{
+    for (int i = 0; i < edConfig.numRows; i++)
+    {
+        char *res = strcasestr(edConfig.row[i].string, buf);
+        if (!res) continue;
+        edConfig.cy = i;
+        edConfig.cx = res - edConfig.row[i].string;
+        break;
+    }
+}
+
+
+void edIncrementalFind(void)
+{
+    char *query = edPrompt("Incremental search: %s (ESC to cancel)", edIncrFind_cb);
+    if (!query) return;
     free(query);
 }
 
@@ -657,7 +687,7 @@ void edSaveFile(const char *filename)
 {
     if (filename == NULL)
     {
-        filename = edPrompt("Enter filename: %s");
+        filename = edPrompt("Enter filename: %s", NULL);
         if (filename == NULL)
         {
             edSetStatusMessage("Save aborted!");
