@@ -7,7 +7,7 @@ project "ned"
     cdialect "gnu11"
     targetdir "build/%{cfg.buildcfg}"
     toolset "clang"
-    
+
     files
     {
         "src/**.h",
@@ -22,6 +22,7 @@ project "ned"
             "-Wshadow",
             "-pedantic",
             "-Wswitch-enum",
+            "-Wwrite-strings",
         }
 
 
@@ -38,8 +39,9 @@ project "ned"
         symbols "On"
 
     filter "configurations:Debug"
+        buildoptions { "-gdwarf-4" }
         defines { "DEBUG" }
-        symbols "On"
+        --symbols "On"
 
     filter "configurations:Release"
         optimize "On"
