@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <ctype.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
@@ -165,7 +166,7 @@ void edProcessKey()
             return;
         case CTRL_KEY('w'):
             edSaveFile(edConfig.filename);
-            edSetStatusMessage("File saved successfully!");
+            //edSetStatusMessage("File saved successfully!");
             break;
         default:
             edInsertChar(key);
@@ -535,6 +536,32 @@ char *edPrompt(char *prompt)
                 return buf;
             }
         }
+        else if (c == ESC_KEY)
+        {
+            edSetStatusMessage("");
+            free(buf);
+            return NULL;
+        }
+        else if (c == BACKSPACE)
+        {
+            if (bufLen <= 0) continue;
+            bufLen--;
+            buf[bufLen] = '\0';
+        }
+        else
+        {
+            if (bufLen == bufSize - 1)
+            {
+                bufSize *= 2;
+                buf = realloc(buf, bufSize);
+                assert(buf);
+            }
+            if (isalnum(c))
+            {
+                buf[bufLen++] = c;
+                buf[bufLen] = '\0';
+            }
+        }
     }
 }
 
@@ -601,8 +628,15 @@ void edOpen(const char *filename)
 
 void edSaveFile(const char *filename)
 {
-    // TODO(noxet): handle this case later
-    if (filename == NULL) return;
+    if (filename == NULL)
+    {
+        filename = edPrompt("Enter filename: %s");
+        if (filename == NULL)
+        {
+            edSetStatusMessage("Save aborted!");
+            return;
+        }
+    }
 
     int bufLen = 0;
     char *content = edRowsToString(&bufLen);
@@ -614,6 +648,7 @@ void edSaveFile(const char *filename)
     fclose(fd);
     free(content);
     edConfig.dirty = false;
+    edSetStatusMessage("File saved successfully");
 }
 
 void edInit()
