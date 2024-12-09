@@ -394,11 +394,11 @@ void edInsertRow(int at, char *line, size_t lineLen)
     // TODO(noxet): reallocate row when we hit limit
     memmove(&edConfig.row[at + 1], &edConfig.row[at], sizeof(edRow_s) * (edConfig.numRows - at));
 
-    line[lineLen] = '\0';
-
     edConfig.row[at].size = lineLen;
     // TODO(noxet): free this memory later, in edClose?
-    edConfig.row[at].string = strdup(line);
+    edConfig.row[at].string = malloc(lineLen + 1);
+    memcpy(edConfig.row[at].string, line, lineLen);
+    edConfig.row[at].string[lineLen] = '\0';
 
     edConfig.row[at].renderString = NULL;
     edConfig.row[at].renderSize = 0;
@@ -513,7 +513,7 @@ void edNewLine()
     edConfig.cy++;
 }
 
-void edPrompt(char *prompt)
+char *edPrompt(char *prompt)
 {
     size_t bufSize = 128;
     char *buf = malloc(bufSize);
@@ -532,7 +532,7 @@ void edPrompt(char *prompt)
             if (bufLen != 0)
             {
                 edSetStatusMessage("");
-                return;
+                return buf;
             }
         }
     }
