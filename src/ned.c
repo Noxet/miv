@@ -337,7 +337,7 @@ void edRefreshScreen()
     astringAppend(frame, CURSOR_SHOW_CMD, CURSOR_SHOW_LEN);
 
     write(STDOUT_FILENO, astringGetString(frame), astringGetLen(frame));
-    
+
     astringFree(&frame);
 }
 
@@ -503,7 +503,7 @@ void edNewLine()
     int sSize = row->size - edConfig.cx;
     // insert row will strdup the string so we have a real copy of it
     edInsertRow(edConfig.cy + 1, s, sSize);
-    
+
     // TODO(noxet): cleanup unused mem?
     row->string[edConfig.cx] = '\0';
     row->size -= sSize;
@@ -511,6 +511,31 @@ void edNewLine()
 
     edConfig.cx = 0;
     edConfig.cy++;
+}
+
+void edPrompt(char *prompt)
+{
+    size_t bufSize = 128;
+    char *buf = malloc(bufSize);
+
+    size_t bufLen = 0;
+    buf[0] = '\0';
+
+    while (1)
+    {
+        edSetStatusMessage(prompt, buf);
+        edRefreshScreen();
+
+        int c = termReadKey();
+        if (c == '\r')
+        {
+            if (bufLen != 0)
+            {
+                edSetStatusMessage("");
+                return;
+            }
+        }
+    }
 }
 
 /*
