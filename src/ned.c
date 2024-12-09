@@ -718,7 +718,7 @@ int main(int argc, char *argv[])
     // disable stdout buffering
     setbuf(stdout, NULL);
 
-    edSetStatusMessage("HELP: CTRL-S to save | CTRL-Q to quit");
+    edSetStatusMessage("HELP: CTRL-W to save | CTRL-F to find | CTRL-Q to quit");
 
     while (nedRunning)
     {
