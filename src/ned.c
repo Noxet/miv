@@ -1,5 +1,6 @@
 
 #define _DEFAULT_SOURCE
+#define _GNU_SOURCE
 
 #include "utils.h"
 #include "terminal.h"
@@ -58,6 +59,7 @@ void edNewLine();
 void edSaveFile(const char *filename);
 void edSetStatusMessage(const char *fmt, ...);
 void edRowDeleteChar(edRow_s *row, int at);
+void edFind(void);
 
 
 static edConfig_s edConfig;
@@ -167,6 +169,11 @@ void edProcessKey()
         case CTRL_KEY('w'):
             edSaveFile(edConfig.filename);
             //edSetStatusMessage("File saved successfully!");
+            break;
+        case CTRL_KEY('f'):
+            edFind();
+            break;
+        case CTRL_KEY('n'):
             break;
         default:
             edInsertChar(key);
@@ -596,6 +603,26 @@ char *edRowsToString(int *bufLen)
 
     return buf;
 }
+
+
+void edFind(void)
+{
+    char *query = edPrompt("Search: %s (ESC to cancel)");
+    if (!query) return;
+
+    for (int i = 0; i < edConfig.numRows; i++)
+    {
+        // case-insensitive search
+        char *res = strcasestr(edConfig.row[i].string, query);
+        if (!res) continue;
+        edConfig.cy = i;
+        edConfig.cx = res - edConfig.row[i].string;
+        break;
+    }
+
+    free(query);
+}
+
 
 void edOpen(const char *filename)
 {
