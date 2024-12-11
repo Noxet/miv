@@ -35,6 +35,14 @@ typedef struct
     int renderSize;
 } edRow_s;
 
+struct edCursorPos_s
+{
+    int cx;
+    int cy;
+    int rowOffset;
+    int colOffset;
+};
+
 typedef struct
 {
     int winRows;    // window size
@@ -50,6 +58,7 @@ typedef struct
     char statusMsg[80];
     time_t statusMsgTime;
     bool dirty;
+    struct edCursorPos_s prevCursorPos;
 } edConfig_s;
 
 
@@ -577,7 +586,7 @@ char *edPrompt(char *prompt, promptCallback callback)
             }
         }
 
-        if (callback) callback(buf, bufLen);
+        if (callback) callback(buf, c);
     }
 }
 
@@ -633,23 +642,69 @@ void edFind(void)
 }
 
 
-void edIncrFind_cb(char *buf, int len)
+void edIncrFind_cb(char *query, int key)
 {
-    for (int i = 0; i < edConfig.numRows; i++)
+    static int prevSearch = 0;
+    static int dir = 1;
+    int startFwd = 0;
+    int startBwd = edConfig.numRows - 1;
+
+    if (key == ARROW_DOWN || key == ARROW_RIGHT)
     {
-        char *res = strcasestr(edConfig.row[i].string, buf);
-        if (!res) continue;
-        edConfig.cy = i;
-        edConfig.cx = res - edConfig.row[i].string;
-        break;
+        startFwd = prevSearch + 1;
+        dir = 1;
+    }
+    else if (key == ARROW_UP || key == ARROW_LEFT)
+    {
+        startBwd = prevSearch - 1;
+        dir = -1;
+    }
+
+    if (dir == 1)
+    {
+        for (int i = startFwd; i < edConfig.numRows; i++)
+        {
+            char *res = strcasestr(edConfig.row[i].string, query);
+            if (!res) continue;
+            edConfig.cy = i;
+            edConfig.cx = res - edConfig.row[i].string;
+            prevSearch = i;
+            break;
+        }
+    }
+    else
+    {
+        for (int i = startBwd; i >= 0; i--)
+        {
+            char *res = strcasestr(edConfig.row[i].string, query);
+            if (!res) continue;
+            edConfig.cy = i;
+            edConfig.cx = res - edConfig.row[i].string;
+            prevSearch = i;
+            break;
+        }
+
     }
 }
 
 
 void edIncrementalFind(void)
 {
+    // TODO(noxet): refactor cx, cy etc to use the struct "CursorPos" instead
+    // save previous cursor position
+    int cx = edConfig.cx;
+    int cy = edConfig.cy;
+    int rowOff = edConfig.rowOffset;
+    int colOff = edConfig.colOffset;
     char *query = edPrompt("Incremental search: %s (ESC to cancel)", edIncrFind_cb);
-    if (!query) return;
+    if (!query)
+    {
+        // restore cursor pos if user cancelled
+        edConfig.cx = cx;
+        edConfig.cy = cy;
+        edConfig.rowOffset = rowOff;
+        edConfig.colOffset = colOff;
+    }
     free(query);
 }
 
