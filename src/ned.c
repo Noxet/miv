@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "terminal.h"
 #include "astring.h"
+#include "syntax.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -321,7 +322,49 @@ void edDrawRows(astring *frame)
             // do not scroll further than row size. Print at most the NULL char
             int colOffset = (edConfig.colOffset <= currRow.renderSize) ? edConfig.colOffset : currRow.renderSize;
             int len = (currRow.renderSize - colOffset > edConfig.winCols) ? edConfig.winCols : currRow.renderSize - colOffset;
-            astringAppend(frame, &currRow.renderString[colOffset], len);
+            //astringAppend(frame, &currRow.renderString[colOffset], len);
+            char *line = strdup(&currRow.renderString[colOffset]);
+            // TODO(noxet): We need to go through the original string, and check if we are at a token.
+            // If so, then we add append the token along with color, and move on to the rest of the 
+            // characters. Right now, we just check every word, removing whitespace which fucks up
+            // the strings..
+            char *token = strtok(line, " ");
+            while (token)
+            {
+                termColor_e color = synGetKeyword(token);
+                if (color != TERM_COLOR_NONE)
+                {
+                    char *colorStr = termGetColor(color);
+                    astringAppend(frame, colorStr, strlen(colorStr));
+                    astringAppend(frame, token, strlen(token));
+                    astringAppend(frame, FG_COLOR_RESET, FG_COLOR_RESET_SIZE);
+                }
+                else
+                {
+                    astringAppend(frame, token, strlen(token));
+                }
+
+                astringAppend(frame, " ", 1);
+
+                token = strtok(NULL, " ");
+            }
+            /*
+            for (int i = 0; i < len; i++)
+            {
+                if (isdigit(line[i]))
+                {
+                    astringAppend(frame, FG_COLOR_RED, 5);
+                    astringAppend(frame, &line[i], 1);
+                    astringAppend(frame, FG_COLOR_RESET, 4);
+                }
+                else
+            {
+                    astringAppend(frame, &line[i], 1);
+                }
+            }
+            */
+
+            free(line);
         }
         else if (y == edConfig.winRows / 3)
         {
@@ -374,6 +417,7 @@ void edSetStatusMessage(const char *fmt, ...)
     edConfig.statusMsgTime = time(NULL);
 }
 
+
 /**
  * Row operations
  */
@@ -384,11 +428,13 @@ void edRenderRow(edRow_s *row)
     free(row->renderString);
     row->renderSize = 0;
     size_t numTabs = 0;
+    size_t numKeywords = 0;
     for (int i = 0; i < row->size; i++)
     {
         if (row->string[i] == '\t') numTabs++;
     }
-    row->renderString = malloc(row->size + numTabs * (NED_TAB_STOP - 1) + 1);
+
+    row->renderString = malloc(row->size + (numTabs * (NED_TAB_STOP - 1)) + 1);
 
     int idx = 0;
     while (row->string[idx])

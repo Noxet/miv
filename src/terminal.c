@@ -147,6 +147,19 @@ termKey_e termReadKey()
     return ch;
 }
 
+char *termGetColor(termColor_e color)
+{
+    switch(color)
+    {
+        case TERM_COLOR_NONE: return "";
+        case TERM_COLOR_WHITE: return FG_COLOR_WHITE;
+        case TERM_COLOR_RED: return FG_COLOR_RED;
+        case TERM_COLOR_RESET: return FG_COLOR_RESET;
+    }
+
+    return NULL;
+}
+
 static termKey_e termParseBracketKeys()
 {
     char seq[2];

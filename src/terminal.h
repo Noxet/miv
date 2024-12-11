@@ -11,6 +11,21 @@
 #define DISPLAY_ERASE_LINE_CMD  "\x1b[K"
 #define DISPLAY_ERASE_LINE_LEN  3
 
+
+#define FG_COLOR_SIZE       9           // a color + reset
+#define FG_COLOR_RESET      "\x1b[0m"
+#define FG_COLOR_RESET_SIZE 4
+#define FG_COLOR_WHITE      "\x1b[30m"
+#define FG_COLOR_RED        "\x1b[31m"
+
+typedef enum
+{
+    TERM_COLOR_NONE,
+    TERM_COLOR_WHITE,
+    TERM_COLOR_RED,
+    TERM_COLOR_RESET,
+} termColor_e;
+
 typedef enum
 {
     ESC_KEY         = '\x1b',
@@ -38,3 +53,4 @@ int termEnableRawMode();
 int termDisableRawMode();
 int termGetWindowSize(int *rows, int *cols);
 termKey_e termReadKey();
+char *termGetColor(termColor_e color);
