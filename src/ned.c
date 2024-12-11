@@ -625,7 +625,7 @@ char *edRowsToString(int *bufLen)
 
 void edFind(void)
 {
-    char *query = edPrompt("Search: %s (ESC to cancel)", NULL);
+    char *query = edPrompt("Search: %s (Use ESC/Arrows/Enter)", NULL);
     if (!query) return;
 
     for (int i = 0; i < edConfig.numRows; i++)
